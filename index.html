@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VoyageVista - Planifiez vos voyages et séjours de rêve.">
+  <title>VoyageVista - Planifiez Vos Voyages de Rêve</title>
+
+  <!-- Polices Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Feuille de style -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- navigation -->
+  <header>
+    <nav class="navbar">
+
+
+      <a href="index.html" class="logo">✈️ VoyageVista</a>
+
+
+      <div class="menu-toggle">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link active">Accueil</a></li>
+        <li><a href="destinations.html" class="nav-link">Destinations</a></li>
+        <li><a href="#experiences" class="nav-link">Expériences</a></li>
+        <li><a href="contact.html" class="nav-link">Contact</a></li>
+      </ul>
+
+
+      <div class="nav-auth">
+        <button class="btn btn-outline" onclick="alert('Fonctionnalité de connexion à développer')">Connexion</button>
+        <button class="btn btn-primary" onclick="alert('Fonctionnalité d\'inscription à développer')">Inscription</button>
+      </div>
+
+    </nav>
+  </header>
+
+  <main>
+
+    <section class="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+
+        <h1>Explorez le Monde avec VoyageVista</h1>
+        <p>Découvrez les destinations les plus époustouflantes et créez des souvenirs inoubliables</p>
+
+
+        <form class="search-bar">
+          <input type="text" placeholder="Destination, hôtel ou aéroport" required>
+          <input type="date" required>
+          <input type="date" required>
+          <select required>
+            <option value="">Voyageurs</option>
+            <option value="1">1 Personne</option>
+            <option value="2">2 Personnes</option>
+            <option value="3">3-4 Personnes</option>
+            <option value="5">5+ Personnes</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Rechercher</button>
+        </form>
+
+
+        <div class="hero-cta">
+          <button class="btn btn-primary btn-large"
+            onclick="document.querySelector('#destinations').scrollIntoView({behavior: 'smooth'})">
+            Découvrir les Destinations
+          </button>
+          <button class="btn btn-outline btn-large"
+            onclick="alert('Vidéo de présentation bientôt disponible !')">
+            🎬 Voir la Vidéo
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="stats-container">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-number" data-target="50000">0</div>
+            <div class="stat-label">Voyageurs Heureux</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="150">0</div>
+            <div class="stat-label">Destinations</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="500">0</div>
+            <div class="stat-label">Hôtels & Hébergements</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="1000">0</div>
+            <div class="stat-label">Expériences Uniques</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="destinations" id="destinations">
+      <div class="destinations-container">
+
+        <div class="section-header">
+          <h2>Destinations Populaires</h2>
+          <p>Explorez les plus belles destinations du monde et réservez votre prochain séjour</p>
+        </div>
+
+
+        <div class="destinations-grid">
+
+          <div class="destination-card scroll-reveal">
+            <div class="destination-image">🏝️</div>
+            <div class="destination-info">
+              <div class="destination-header">
+                <div class="destination-name">
+                  <h3>Maldives</h3>
+                  <p>Océan Indien</p>
+                </div>
+                <div class="destination-price">À partir de 1 299€</div>
+              </div>
+              <div class="destination-rating">
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span>
+                <span style="color: #999; margin-left: 0.5rem;">(4.8 — 2 145 avis)</span>
+              </div>
+              <p class="destination-desc">Bungalows sur l'eau, plages de sable blanc et récifs coralliens spectaculaires.</p>
+              <div class="destination-features">
+                <span class="feature-tag">Plage Privée</span>
+                <span class="feature-tag">Snorkeling</span>
+                <span class="feature-tag">Spa</span>
+              </div>
+              <div class="destination-action">
+                <button class="btn-details">Détails</button>
+                <button class="btn-book">Réserver</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="destination-card scroll-reveal">
+            <div class="destination-image">🏞️</div>
+            <div class="destination-info">
+              <div class="destination-header">
+                <div class="destination-name">
+                  <h3>Bali</h3>
+                  <p>Indonésie</p>
+                </div>
+                <div class="destination-price">À partir de 799€</div>
+              </div>
+              <div class="destination-rating">
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span>
+                <span style="color: #999; margin-left: 0.5rem;">(4.7 — 3 421 avis)</span>
+              </div>
+              <p class="destination-desc">Temples anciens, rizières verdoyantes et plages de sable noir de Bali.</p>
+              <div class="destination-features">
+                <span class="feature-tag">Temples</span>
+                <span class="feature-tag">Yoga</span>
+                <span class="feature-tag">Nature</span>
+              </div>
+              <div class="destination-action">
+                <button class="btn-details">Détails</button>
+                <button class="btn-book">Réserver</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="destination-card scroll-reveal">
+            <div class="destination-image">🌅</div>
+            <div class="destination-info">
+              <div class="destination-header">
+                <div class="destination-name">
+                  <h3>Santorin</h3>
+                  <p>Grèce</p>
+                </div>
+                <div class="destination-price">À partir de 1 099€</div>
+              </div>
+              <div class="destination-rating">
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span>
+                <span style="color: #999; margin-left: 0.5rem;">(4.9 — 1 876 avis)</span>
+              </div>
+              <p class="destination-desc">Couchers de soleil magiques, maisons blanches et bleues, vins locaux réputés.</p>
+              <div class="destination-features">
+                <span class="feature-tag">Coucher de Soleil</span>
+                <span class="feature-tag">Vin</span>
+                <span class="feature-tag">Mer</span>
+              </div>
+              <div class="destination-action">
+                <button class="btn-details">Détails</button>
+                <button class="btn-book">Réserver</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="destination-card scroll-reveal">
+            <div class="destination-image">🏛️</div>
+            <div class="destination-info">
+              <div class="destination-header">
+                <div class="destination-name">
+                  <h3>Thaïlande</h3>
+                  <p>Asie du Sud-Est</p>
+                </div>
+                <div class="destination-price">À partir de 649€</div>
+              </div>
+              <div class="destination-rating">
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span><span class="star">★</span>
+                <span class="star">★</span>
+                <span style="color: #999; margin-left: 0.5rem;">(4.8 — 2 654 avis)</span>
+              </div>
+              <p class="destination-desc">Bangkok, îles tropicales et cuisine thaïlandaise délicieuse.</p>
+              <div class="destination-features">
+                <span class="feature-tag">Îles</span>
+                <span class="feature-tag">Culture</span>
+                <span class="feature-tag">Cuisine</span>
+              </div>
+              <div class="destination-action">
+                <button class="btn-details">Détails</button>
+                <button class="btn-book">Réserver</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <div class="carousel-nav">
+          <button class="carousel-btn">←</button>
+          <button class="carousel-btn">→</button>
+        </div>
+
+
+        <div style="text-align: center; margin-top: 2rem;">
+          <a href="destinations.html" class="btn btn-primary">Voir toutes les destinations</a>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="why-us" id="why-us">
+      <div class="section-header">
+        <h2>Pourquoi Choisir VoyageVista ?</h2>
+        <p>Les avantages qui font de VoyageVista votre meilleur allié de voyage</p>
+      </div>
+
+      <div class="why-us-grid">
+        <div class="benefit-card scroll-reveal">
+          <div class="benefit-icon">🔐</div>
+          <h4>Réservations Sécurisées</h4>
+          <p>Paiements cryptés et garantie de remboursement. Vos données sont toujours protégées.</p>
+        </div>
+        <div class="benefit-card scroll-reveal">
+          <div class="benefit-icon">💰</div>
+          <h4>Meilleurs Prix Garantis</h4>
+          <p>Si vous trouvez moins cher ailleurs, nous vous remboursons la différence.</p>
+        </div>
+        <div class="benefit-card scroll-reveal">
+          <div class="benefit-icon">🌍</div>
+          <h4>Plus de 150 Destinations</h4>
+          <p>Des plages paradisiaques aux montagnes majestueuses, le monde s'offre à vous.</p>
+        </div>
+        <div class="benefit-card scroll-reveal">
+          <div class="benefit-icon">🎯</div>
+          <h4>Support Client 24/7</h4>
+          <p>Notre équipe est disponible à toute heure pour répondre à vos questions.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="experiences" id="experiences">
+      <div class="experiences-container">
+
+        <div class="section-header">
+          <h2>Expériences Inoubliables</h2>
+          <p>Vivez des moments exceptionnels et créez des souvenirs pour toute une vie</p>
+        </div>
+
+        <div class="experiences-grid">
+
+          <div class="experience-card scroll-reveal">
+            <div class="experience-image">🤿</div>
+            <div class="experience-content">
+              <h3 class="experience-title">Plongée Sous-Marine</h3>
+              <p class="experience-desc">Explorez les récifs coralliens et découvrez la vie marine dans les eaux cristallines des tropiques.</p>
+              <a href="#" class="experience-link">Découvrir la plongée →</a>
+            </div>
+          </div>
+
+          <div class="experience-card scroll-reveal">
+            <div class="experience-image">🏄</div>
+            <div class="experience-content">
+              <h3 class="experience-title">Surf & Sports d'Eau</h3>
+              <p class="experience-desc">Prenez les vagues sur les plus belles plages du monde. Cours et équipement inclus pour tous niveaux.</p>
+              <a href="#" class="experience-link">Essayer le surf →</a>
+            </div>
+          </div>
+
+          <div class="experience-card scroll-reveal">
+            <div class="experience-image">🏔️</div>
+            <div class="experience-content">
+              <h3 class="experience-title">Trekking & Randonnée</h3>
+              <p class="experience-desc">Explorez les paysages montagneux les plus impressionnants du globe à votre propre rythme.</p>
+              <a href="#" class="experience-link">Commencer l'aventure →</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="testimonials" id="testimonials">
+      <div class="testimonials-container">
+
+        <div class="section-header">
+          <h2>Avis de Nos Voyageurs</h2>
+          <p>Les témoignages de ceux qui ont vécu des expériences inoubliables avec VoyageVista</p>
+        </div>
+
+        <div class="testimonials-grid">
+
+          <div class="testimonial-card scroll-reveal">
+            <div class="testimonial-stars">
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <p class="testimonial-text">"VoyageVista a transformé mon voyage aux Maldives en expérience magique ! Le service était impeccable du début à la fin."</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">A</div>
+              <div class="author-info">
+                <h4>Amélie Dupont</h4>
+                <p>Paris, France</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card scroll-reveal">
+            <div class="testimonial-stars">
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <p class="testimonial-text">"Les meilleurs prix du marché ! L'interface est simple à utiliser et le support répond immédiatement."</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">M</div>
+              <div class="author-info">
+                <h4>Marc Leroux</h4>
+                <p>Lyon, France</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card scroll-reveal">
+            <div class="testimonial-stars">
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span><span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <p class="testimonial-text">"Mon séjour en Thaïlande était incroyable. VoyageVista a géré chaque détail à la perfection !"</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">S</div>
+              <div class="author-info">
+                <h4>Sophie Rousseau</h4>
+                <p>Marseille, France</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="newsletter" id="newsletter">
+      <div class="newsletter-container">
+        <h2>Recevez nos Meilleures Offres</h2>
+        <p>Inscrivez-vous à notre newsletter pour recevoir les dernières offres en exclusivité</p>
+        <form class="newsletter-form">
+          <input type="email" placeholder="Votre adresse email" required>
+          <button type="submit" class="btn btn-primary">S'inscrire</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- footer -->
+  <footer>
+    <div class="footer-container">
+
+      <div class="footer-grid">
+
+        <div class="footer-section">
+          <h4>À Propos de VoyageVista</h4>
+          <p>Votre plateforme de voyage premium pour des expériences inoubliables partout dans le monde.</p>
+          <div class="social-links">
+            <a href="#" class="social-link" title="Facebook">f</a>
+            <a href="#" class="social-link" title="Instagram">📷</a>
+            <a href="#" class="social-link" title="Twitter">𝕏</a>
+            <a href="#" class="social-link" title="LinkedIn">in</a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h4>Explorer</h4>
+          <ul class="footer-links">
+            <li><a href="destinations.html">Destinations Populaires</a></li>
+            <li><a href="#experiences">Expériences Uniques</a></li>
+            <li><a href="#">Offres Spéciales</a></li>
+            <li><a href="#">Blog Voyage</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Support</h4>
+          <ul class="footer-links">
+            <li><a href="contact.html">Nous Contacter</a></li>
+            <li><a href="#">FAQ</a></li>
+            <li><a href="#">Centre d'Aide</a></li>
+            <li><a href="#">Conditions d'Utilisation</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Contact</h4>
+          <p>
+            📍 123 Avenue du Voyage<br>
+            75008 Paris, France<br><br>
+            📞 +33 1 23 45 67 89<br>
+            ✉️ info@voyagevista.com
+          </p>
+        </div>
+
+      </div>
+
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 VoyageVista. Tous droits réservés.</div>
+        <ul class="footer-legal">
+          <li><a href="#">Politique de Confidentialité</a></li>
+          <li><a href="#">Mentions Légales</a></li>
+          <li><a href="#">Conditions Générales</a></li>
+        </ul>
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+
+</body>
+</html>

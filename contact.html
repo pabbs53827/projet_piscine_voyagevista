@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VoyageVista - Contactez notre équipe.">
+  <title>Contact - VoyageVista</title>
+
+  <!-- Polices Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Styles spécifiques à cette page -->
+  <style>
+    /* En-tête avec dégradé bleu océan */
+    .page-header {
+      background: var(--gradient-ocean);
+      color: white;
+      text-align: center;
+      padding: 6rem 2rem 3rem;
+      margin-top: 70px;
+    }
+
+    .page-header h1 {
+      color: white;
+      margin-bottom: 1rem;
+    }
+
+    .page-header p {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    /* Section principale : 2 colonnes (infos | formulaire) */
+    .contact-section {
+      padding: 4rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    /* Colonne de gauche : informations de contact */
+    .contact-infos h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Un bloc d'information (icône + texte) */
+    .info-bloc {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.2rem;
+      background: var(--color-beige-light);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      transition: transform 0.3s ease;
+    }
+
+    .info-bloc:hover {
+      transform: translateX(5px); /* Petit déplacement au survol */
+    }
+
+    .info-bloc-icone {
+      font-size: 1.5rem;
+      flex-shrink: 0; /* Ne rétrécit pas si le texte est long */
+    }
+
+    .info-bloc h4 {
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .info-bloc p {
+      font-size: 0.875rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Colonne de droite : formulaire de contact */
+    .contact-formulaire {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .contact-formulaire h2 {
+      margin-bottom: 1.5rem;
+    }
+
+    /* Groupe label + champ */
+    .champ-groupe {
+      margin-bottom: 1.5rem;
+    }
+
+    .champ-groupe label {
+      display: block;
+      font-family: var(--font-primary);
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--color-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    /* L'astérisque rouge indique un champ obligatoire */
+    .champ-groupe label span {
+      color: #F17B5D;
+    }
+
+    /* Styles communs à tous les champs du formulaire */
+    .champ-groupe input,
+    .champ-groupe select,
+    .champ-groupe textarea {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border: 2px solid var(--color-gray-light);
+      border-radius: 10px;
+      font-family: var(--font-secondary);
+      font-size: 0.875rem;
+      background: var(--color-beige-light);
+      transition: border-color 0.3s ease, background 0.3s ease;
+    }
+
+    /* Style quand un champ est actif (focus) */
+    .champ-groupe input:focus,
+    .champ-groupe select:focus,
+    .champ-groupe textarea:focus {
+      outline: none;
+      border-color: var(--color-blue);
+      background: white;
+    }
+
+    /* Zone de texte redimensionnable verticalement */
+    .champ-groupe textarea {
+      height: 150px;
+      resize: vertical;
+    }
+
+    /* Deux champs côte à côte (prénom / nom) */
+    .champs-double {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* Message de confirmation (caché par défaut) */
+    .message-confirmation {
+      display: none;
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+      font-weight: 600;
+      text-align: center;
+      border: 1px solid #c3e6cb;
+    }
+
+    /* Message d'erreur */
+    .message-erreur {
+      display: none;
+      background: #f8d7da;
+      color: #721c24;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Responsive : une seule colonne sur mobile */
+    @media (max-width: 768px) {
+      .contact-section {
+        grid-template-columns: 1fr;
+      }
+
+      .champs-double {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- navigation -->
+  <header>
+    <nav class="navbar">
+      <a href="index.html" class="logo">✈️ VoyageVista</a>
+
+      <div class="menu-toggle">
+        <span></span><span></span><span></span>
+      </div>
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Accueil</a></li>
+        <li><a href="destinations.html" class="nav-link">Destinations</a></li>
+        <li><a href="index.html#experiences" class="nav-link">Expériences</a></li>
+        <li><a href="contact.html" class="nav-link active">Contact</a></li>
+      </ul>
+
+      <div class="nav-auth">
+        <button class="btn btn-outline" onclick="alert('Connexion - À développer')">Connexion</button>
+        <button class="btn btn-primary" onclick="alert('Inscription - À développer')">Inscription</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- EN-TÊTE DE LA PAGE -->
+    <div class="page-header">
+      <h1>Nous Contacter</h1>
+      <p>Notre équipe est disponible 24h/24 pour répondre à toutes vos questions</p>
+    </div>
+
+    <div class="contact-section">
+
+      <div class="contact-infos">
+        <h2>Nos Coordonnées</h2>
+
+        <div class="info-bloc">
+          <div class="info-bloc-icone">📍</div>
+          <div>
+            <h4>Adresse</h4>
+            <p>123 Avenue du Voyage<br>75008 Paris, France</p>
+          </div>
+        </div>
+
+        <div class="info-bloc">
+          <div class="info-bloc-icone">📞</div>
+          <div>
+            <h4>Téléphone</h4>
+            <p>+33 1 23 45 67 89<br>Du lundi au dimanche, 24h/24</p>
+          </div>
+        </div>
+
+        <div class="info-bloc">
+          <div class="info-bloc-icone">✉️</div>
+          <div>
+            <h4>Email</h4>
+            <p>info@voyagevista.com<br>Réponse garantie sous 24h</p>
+          </div>
+        </div>
+
+        <div class="info-bloc">
+          <div class="info-bloc-icone">🕐</div>
+          <div>
+            <h4>Disponibilité</h4>
+            <p>Disponible 24h/24, 7j/7<br>Service client premium</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-formulaire">
+        <h2>Envoyer un Message</h2>
+
+        <form id="formulaire-contact">
+
+          <div class="champs-double">
+            <div class="champ-groupe">
+              <label for="prenom">Prénom <span>*</span></label>
+              <input type="text" id="prenom" name="prenom" placeholder="Votre prénom" required>
+            </div>
+            <div class="champ-groupe">
+              <label for="nom">Nom <span>*</span></label>
+              <input type="text" id="nom" name="nom" placeholder="Votre nom" required>
+            </div>
+          </div>
+
+          <div class="champ-groupe">
+            <label for="email">Adresse Email <span>*</span></label>
+            <input type="email" id="email" name="email" placeholder="votre@email.com" required>
+          </div>
+
+          <div class="champ-groupe">
+            <label for="telephone">Téléphone</label>
+            <input type="tel" id="telephone" name="telephone" placeholder="+33 6 00 00 00 00">
+          </div>
+
+          <div class="champ-groupe">
+            <label for="sujet">Sujet de votre demande</label>
+            <select id="sujet" name="sujet">
+              <option value="">— Choisissez un sujet —</option>
+              <option value="reservation">Question sur une réservation</option>
+              <option value="destination">Renseignement sur une destination</option>
+              <option value="annulation">Annulation / Remboursement</option>
+              <option value="partenariat">Partenariat professionnel</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          <div class="champ-groupe">
+            <label for="message">Votre Message <span>*</span></label>
+            <textarea id="message" name="message" placeholder="Décrivez votre demande en détail..." required></textarea>
+          </div>
+
+          <!-- Bouton de soumission -->
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;">
+            Envoyer le Message
+          </button>
+
+          <div class="message-confirmation" id="msg-succes">
+            ✅ Votre message a bien été envoyé ! Nous vous répondrons sous 24h.
+          </div>
+          <div class="message-erreur" id="msg-erreur">
+            ❌ Veuillez remplir tous les champs obligatoires (*).
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-section">
+          <h4>À Propos de VoyageVista</h4>
+          <p>Votre plateforme de voyage premium pour des expériences inoubliables.</p>
+        </div>
+        <div class="footer-section">
+          <h4>Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="destinations.html">Destinations</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Contact</h4>
+          <p>✉️ info@voyagevista.com<br>📞 +33 1 23 45 67 89</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 VoyageVista. Tous droits réservés.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+
+  <script>
+    // On récupère le formulaire et les messages
+    const formulaire = document.getElementById('formulaire-contact');
+    const msgSucces = document.getElementById('msg-succes');
+    const msgErreur = document.getElementById('msg-erreur');
+
+    // Fonction simple pour vérifier le format d'un email
+    function estEmailValide(email) {
+      return email.includes('@') && email.includes('.');
+    }
+
+    // Quand le formulaire est soumis
+    formulaire.addEventListener('submit', function(e) {
+      e.preventDefault(); // On empêche le rechargement de la page
+
+      // On masque les messages précédents
+      msgSucces.style.display = 'none';
+      msgErreur.style.display = 'none';
+
+      // On lit les valeurs des champs obligatoires
+      const prenom = document.getElementById('prenom').value.trim();
+      const nom = document.getElementById('nom').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      // Vérification : aucun champ obligatoire ne doit être vide
+      if (!prenom || !nom || !message) {
+        msgErreur.style.display = 'block';
+        return; // On arrête ici si les champs sont vides
+      }
+
+      // Vérification de l'email
+      if (!estEmailValide(email)) {
+        msgErreur.textContent = '❌ Adresse email invalide. Exemple : nom@email.com';
+        msgErreur.style.display = 'block';
+        return;
+      }
+
+      // Tout est valide : on affiche le message de succès
+      msgSucces.style.display = 'block';
+
+      // On vide le formulaire et on cache le message après 4 secondes
+      setTimeout(function() {
+        formulaire.reset();
+        msgSucces.style.display = 'none';
+      }, 4000);
+    });
+  </script>
+
+</body>
+</html>

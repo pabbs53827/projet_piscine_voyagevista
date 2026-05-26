@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VoyageVista - Toutes nos destinations de voyage.">
+  <title>Destinations - VoyageVista</title>
+
+  <!-- Polices Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Styles spécifiques à cette page -->
+  <style>
+    /* En-tête de page avec dégradé sunset */
+    .page-header {
+      background: var(--gradient-sunset);
+      color: white;
+      text-align: center;
+      padding: 6rem 2rem 3rem;
+      margin-top: 70px;
+    }
+
+    .page-header h1 {
+      color: white;
+      margin-bottom: 1rem;
+    }
+
+    .page-header p {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    /* Barre de filtres collante (reste visible au scroll) */
+    .filtres {
+      background: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 70px; /* colle sous la navbar */
+      z-index: 100;
+    }
+
+    /* Boutons de filtre */
+    .filtre-btn {
+      padding: 0.6rem 1.5rem;
+      border: 2px solid var(--color-orange);
+      background: white;
+      color: var(--color-orange);
+      border-radius: 25px;
+      cursor: pointer;
+      font-family: var(--font-primary);
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    /* Bouton filtre actif (sélectionné) ou au survol */
+    .filtre-btn:hover,
+    .filtre-btn.actif {
+      background: var(--color-orange);
+      color: white;
+    }
+
+    /* Zone principale de la page */
+    .destinations-page {
+      padding: 3rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Compteur de résultats */
+    .compteur-resultats {
+      text-align: center;
+      color: var(--color-gray);
+      margin-bottom: 2rem;
+      font-size: 1rem;
+    }
+
+    /* Classe ajoutée aux cartes à masquer par le filtre */
+    .destination-card.masquee {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- navigation -->
+  <header>
+    <nav class="navbar">
+      <a href="index.html" class="logo">✈️ VoyageVista</a>
+
+      <div class="menu-toggle">
+        <span></span><span></span><span></span>
+      </div>
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Accueil</a></li>
+        <li><a href="destinations.html" class="nav-link active">Destinations</a></li>
+        <li><a href="index.html#experiences" class="nav-link">Expériences</a></li>
+        <li><a href="contact.html" class="nav-link">Contact</a></li>
+      </ul>
+
+      <div class="nav-auth">
+        <button class="btn btn-outline" onclick="alert('Connexion - À développer')">Connexion</button>
+        <button class="btn btn-primary" onclick="alert('Inscription - À développer')">Inscription</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- EN-TÊTE DE LA PAGE -->
+    <div class="page-header">
+      <h1>Toutes Nos Destinations</h1>
+      <p>Découvrez notre sélection de destinations pour votre prochain voyage de rêve</p>
+    </div>
+
+    <div class="filtres">
+      <button class="filtre-btn actif" data-filtre="tous">Toutes</button>
+      <button class="filtre-btn" data-filtre="asie">Asie</button>
+      <button class="filtre-btn" data-filtre="europe">Europe</button>
+      <button class="filtre-btn" data-filtre="amerique">Amérique</button>
+      <button class="filtre-btn" data-filtre="afrique">Afrique</button>
+      <button class="filtre-btn" data-filtre="oceanie">Océanie</button>
+    </div>
+
+    <div class="destinations-page">
+
+      <p class="compteur-resultats" id="compteur">9 destinations trouvées</p>
+
+      <div class="destinations-grid" id="grille-destinations">
+
+        <div class="destination-card" data-region="asie">
+          <div class="destination-image">🏝️</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Maldives</h3>
+                <p>Océan Indien</p>
+              </div>
+              <div class="destination-price">À partir de 1 299€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.8)</span>
+            </div>
+            <p class="destination-desc">Bungalows sur l'eau, plages de sable blanc et récifs coralliens.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Plage</span>
+              <span class="feature-tag">Luxe</span>
+              <span class="feature-tag">Snorkeling</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="asie">
+          <div class="destination-image">🏞️</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Bali</h3>
+                <p>Indonésie</p>
+              </div>
+              <div class="destination-price">À partir de 799€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.7)</span>
+            </div>
+            <p class="destination-desc">Temples, rizières verdoyantes et plages de sable noir.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Temples</span>
+              <span class="feature-tag">Yoga</span>
+              <span class="feature-tag">Nature</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="asie">
+          <div class="destination-image">🏛️</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Thaïlande</h3>
+                <p>Asie du Sud-Est</p>
+              </div>
+              <div class="destination-price">À partir de 649€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.8)</span>
+            </div>
+            <p class="destination-desc">Bangkok, îles tropicales et cuisine délicieuse.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Îles</span>
+              <span class="feature-tag">Culture</span>
+              <span class="feature-tag">Cuisine</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="europe">
+          <div class="destination-image">🌅</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Santorin</h3>
+                <p>Grèce</p>
+              </div>
+              <div class="destination-price">À partir de 1 099€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.9)</span>
+            </div>
+            <p class="destination-desc">Couchers de soleil magiques et maisons blanches et bleues.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Romantique</span>
+              <span class="feature-tag">Vin</span>
+              <span class="feature-tag">Mer</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="europe">
+          <div class="destination-image">🗼</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Paris</h3>
+                <p>France</p>
+              </div>
+              <div class="destination-price">À partir de 299€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.6)</span>
+            </div>
+            <p class="destination-desc">La ville lumière : Tour Eiffel, musées et gastronomie mondiale.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Culture</span>
+              <span class="feature-tag">Gastronomie</span>
+              <span class="feature-tag">Art</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="amerique">
+          <div class="destination-image">🗽</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>New York</h3>
+                <p>États-Unis</p>
+              </div>
+              <div class="destination-price">À partir de 699€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.7)</span>
+            </div>
+            <p class="destination-desc">Central Park, Broadway et skyline mythique de la Big Apple.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Ville</span>
+              <span class="feature-tag">Shopping</span>
+              <span class="feature-tag">Shows</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="afrique">
+          <div class="destination-image">🕌</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Marrakech</h3>
+                <p>Maroc</p>
+              </div>
+              <div class="destination-price">À partir de 349€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.7)</span>
+            </div>
+            <p class="destination-desc">Les souks colorés, le désert du Sahara et les riads authentiques.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Désert</span>
+              <span class="feature-tag">Culture</span>
+              <span class="feature-tag">Riads</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="oceanie">
+          <div class="destination-image">🦘</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Sydney</h3>
+                <p>Australie</p>
+              </div>
+              <div class="destination-price">À partir de 1 199€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.8)</span>
+            </div>
+            <p class="destination-desc">Opera House, Bondi Beach et vie en plein air exceptionnelle.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Plage</span>
+              <span class="feature-tag">Nature</span>
+              <span class="feature-tag">Ville</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="destination-card" data-region="amerique">
+          <div class="destination-image">🏔️</div>
+          <div class="destination-info">
+            <div class="destination-header">
+              <div class="destination-name">
+                <h3>Machu Picchu</h3>
+                <p>Pérou</p>
+              </div>
+              <div class="destination-price">À partir de 899€</div>
+            </div>
+            <div class="destination-rating">
+              <span class="star">★★★★★</span>
+              <span style="color: #999; margin-left: 0.5rem;">(4.9)</span>
+            </div>
+            <p class="destination-desc">La cité inca mystérieuse perchée dans les Andes péruviennes.</p>
+            <div class="destination-features">
+              <span class="feature-tag">Histoire</span>
+              <span class="feature-tag">Trekking</span>
+              <span class="feature-tag">Nature</span>
+            </div>
+            <div class="destination-action">
+              <button class="btn-details">Détails</button>
+              <button class="btn-book">Réserver</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-section">
+          <h4>À Propos de VoyageVista</h4>
+          <p>Votre plateforme de voyage premium pour des expériences inoubliables.</p>
+        </div>
+        <div class="footer-section">
+          <h4>Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="destinations.html">Destinations</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Contact</h4>
+          <p>✉️ info@voyagevista.com<br>📞 +33 1 23 45 67 89</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 VoyageVista. Tous droits réservés.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+
+  <script>
+    // On récupère tous les boutons de filtre
+    const boutonsFiltre = document.querySelectorAll('.filtre-btn');
+
+    // On écoute le clic sur chaque bouton
+    boutonsFiltre.forEach(function(bouton) {
+      bouton.addEventListener('click', function() {
+
+        // Étape 1 : retirer la classe "actif" de tous les boutons
+        boutonsFiltre.forEach(function(b) {
+          b.classList.remove('actif');
+        });
+
+        // Étape 2 : marquer le bouton cliqué comme actif
+        this.classList.add('actif');
+
+        // Étape 3 : lire le filtre choisi depuis l'attribut data-filtre
+        const filtreChoisi = this.getAttribute('data-filtre');
+
+        // Étape 4 : afficher ou masquer les cartes selon leur data-region
+        const cartes = document.querySelectorAll('.destination-card');
+        let nbVisible = 0;
+
+        cartes.forEach(function(carte) {
+          const regionCarte = carte.getAttribute('data-region');
+
+          // Si le filtre est "tous" ou correspond à la région de la carte
+          if (filtreChoisi === 'tous' || regionCarte === filtreChoisi) {
+            carte.classList.remove('masquee'); // On affiche la carte
+            nbVisible++;
+          } else {
+            carte.classList.add('masquee'); // On masque la carte
+          }
+        });
+
+        // Étape 5 : mettre à jour le texte du compteur
+        const compteur = document.getElementById('compteur');
+        if (nbVisible === 0) {
+          compteur.textContent = 'Aucune destination trouvée pour cette région.';
+        } else {
+          compteur.textContent = nbVisible + ' destination(s) trouvée(s)';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
