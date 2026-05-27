@@ -294,8 +294,9 @@
     const [nbPass,setNbPass]     = useState(1);
     const [showTr,setShowTr]     = useState(null);
     const [sensTr,setSensTr]     = useState('aller');
-    const [msg,setMsg]   = useState('');
-    const [busy,setBusy] = useState(false);
+    const [msg,setMsg]     = useState('');
+    const [msgOk,setMsgOk] = useState(false);
+    const [busy,setBusy]   = useState(false);
 
     useEffect(()=>{
       Promise.all([
@@ -306,7 +307,7 @@
     },[destination.id_destination]);
 
     function ouvrirHeb(h){
-      setMsg(''); setActSel(null); setShowTr(false);
+      setMsg(''); setMsgOk(false); setActSel(null); setShowTr(false);
       const d1=new Date(); d1.setDate(d1.getDate()+1);
       const d2=new Date(); d2.setDate(d2.getDate()+8);
       const fmt=d=>d.toISOString().split('T')[0];
@@ -320,33 +321,33 @@
       return Math.max(1,Math.ceil(j/7))*Number(h.prix_semaine);
     }
     async function reserverHeb(){
-      if(!hebSel||!dateDebut||!dateFin) return; setBusy(true); setMsg('');
+      if(!hebSel||!dateDebut||!dateFin) return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
         await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_hebergement:hebSel.id_hebergement,date_debut:dateDebut,date_fin:dateFin})});
-        setMsg('✓ Hébergement ajouté à votre séjour !'); setHebSel(null);
-      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+        setMsg('Hébergement ajouté à votre séjour !'); setMsgOk(true); setHebSel(null);
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
     async function ouvrirAct(a){
-      setMsg(''); setHebSel(null); setShowTr(false);
+      setMsg(''); setMsgOk(false); setHebSel(null); setShowTr(false);
       const d=await api(`creneaux.php?activite=${a.id_activite}`);
       setActSel({act:a,creneaux:d.creneaux}); setCrenPick(d.creneaux[0]?.id_creneau??null); setNbPart(1);
     }
     async function reserverAct(){
-      if(!crenPick)return; setBusy(true); setMsg('');
+      if(!crenPick)return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
         await api('ajouter_activite.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_creneau:crenPick,nb_participants:nbPart})});
-        setMsg('✓ Activité ajoutée !'); setActSel(null);
-      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+        setMsg('Activité ajoutée !'); setMsgOk(true); setActSel(null);
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
     async function reserverTransport(){
-      if(!trPick)return; setBusy(true); setMsg('');
+      if(!trPick)return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
         await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass,sens:sensTr})});
-        setMsg('✓ Transport ajouté à votre séjour !'); setShowTr(false);
+        setMsg('Transport ajouté à votre séjour !'); setMsgOk(true); setShowTr(false);
         // rafraîchir les transports
         const d=await api(`transports.php?destination=${destination.id_destination}`);
         setData(prev=>({...prev,transports:d.transports}));
-      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
 
     if(loading)return <div className="screen-center muted">Chargement…</div>;
@@ -379,8 +380,8 @@
           <p className="dest-desc-full muted">{destination.description}</p>
           {msg&&(
             <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap',margin:'0 0 1rem'}}>
-              <p className={msg.startsWith('✓')?'msg-ok':'error'} style={{margin:0}}>{msg}</p>
-              {msg.startsWith('✓')&&<button className="btn-ghost" style={{fontSize:'.85rem',padding:'.35rem .8rem',whiteSpace:'nowrap'}} onClick={()=>nav('panier')}>Voir mon séjour →</button>}
+              <p className={msgOk?'msg-ok':'error'} style={{margin:0}}>{msgOk?'✓ ':''}{msg}</p>
+              {msgOk&&<button className="btn-ghost" style={{fontSize:'.85rem',padding:'.35rem .8rem',whiteSpace:'nowrap'}} onClick={()=>nav('panier')}>Voir mon séjour →</button>}
             </div>
           )}
 
