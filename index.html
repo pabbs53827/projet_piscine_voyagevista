@@ -97,51 +97,49 @@
 
     return (
       <div className="login-page">
-        <div className="login-left">
-          <p className="brand" style={{color:'#faf6ef',marginBottom:'2rem'}}>VoyageVista</p>
-          <h1 className="login-title">Vivez là-bas.<br/>Pas juste de passage.</h1>
-        </div>
-        <div className="login-right">
-          <div className="card auth-card">
-            <div className="auth-tabs">
-              <button className={`auth-tab${mode==='login'?' active':''}`} onClick={()=>{setMode('login');setError('');}}>Se connecter</button>
-              <button className={`auth-tab${mode==='register'?' active':''}`} onClick={()=>{setMode('register');setError('');}}>Créer un compte</button>
-            </div>
-
-            {mode==='login' ? (
-              <form onSubmit={submitLogin} className="form">
-                <label className="field"><span>Email</span>
-                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="username"/>
-                </label>
-                <label className="field"><span>Mot de passe</span>
-                  <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)} required autoComplete="current-password"/>
-                </label>
-                {error && <p className="error">{error}</p>}
-                <button type="submit" className="btn" disabled={busy}>{busy?'Connexion…':'Se connecter'}</button>
-              </form>
-            ) : (
-              <form onSubmit={submitRegister} className="form">
-                <div className="form-row">
-                  <label className="field"><span>Prénom</span><input value={rPrenom} onChange={e=>setRPrenom(e.target.value)} required/></label>
-                  <label className="field"><span>Nom</span><input value={rNom} onChange={e=>setRNom(e.target.value)} required/></label>
-                </div>
-                <label className="field"><span>Email</span>
-                  <input type="email" value={rEmail} onChange={e=>setREmail(e.target.value)} required autoComplete="email"/>
-                </label>
-                <label className="field"><span>Mot de passe (8 caractères min.)</span>
-                  <input type="password" value={rMdp} onChange={e=>setRMdp(e.target.value)} required minLength={8} autoComplete="new-password"/>
-                </label>
-                <label className="field"><span>Je suis</span>
-                  <select value={rRole} onChange={e=>setRRole(e.target.value)}>
-                    <option value="voyageur">Voyageur — je planifie des séjours</option>
-                    <option value="hote">Hôte — je propose des hébergements</option>
-                  </select>
-                </label>
-                {error && <p className="error">{error}</p>}
-                <button type="submit" className="btn" disabled={busy}>{busy?'Création…':'Créer mon compte'}</button>
-              </form>
-            )}
+        <div className="card login-card">
+          <div className="login-card-header">
+            <img src="logo.png" alt="VoyageVista" className="login-logo"/>
+            <h1 className="login-title">Le monde n'attend que vous.</h1>
           </div>
+          <div className="auth-tabs">
+            <button className={`auth-tab${mode==='login'?' active':''}`} onClick={()=>{setMode('login');setError('');}}>Se connecter</button>
+            <button className={`auth-tab${mode==='register'?' active':''}`} onClick={()=>{setMode('register');setError('');}}>Créer un compte</button>
+          </div>
+
+          {mode==='login' ? (
+            <form onSubmit={submitLogin} className="form">
+              <label className="field"><span>Email</span>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="username"/>
+              </label>
+              <label className="field"><span>Mot de passe</span>
+                <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)} required autoComplete="current-password"/>
+              </label>
+              {error && <p className="error">{error}</p>}
+              <button type="submit" className="btn" style={{width:'100%',marginTop:'.25rem'}} disabled={busy}>{busy?'Connexion…':'Se connecter'}</button>
+            </form>
+          ) : (
+            <form onSubmit={submitRegister} className="form">
+              <div className="form-row">
+                <label className="field"><span>Prénom</span><input value={rPrenom} onChange={e=>setRPrenom(e.target.value)} required/></label>
+                <label className="field"><span>Nom</span><input value={rNom} onChange={e=>setRNom(e.target.value)} required/></label>
+              </div>
+              <label className="field"><span>Email</span>
+                <input type="email" value={rEmail} onChange={e=>setREmail(e.target.value)} required autoComplete="email"/>
+              </label>
+              <label className="field"><span>Mot de passe (8 caractères min.)</span>
+                <input type="password" value={rMdp} onChange={e=>setRMdp(e.target.value)} required minLength={8} autoComplete="new-password"/>
+              </label>
+              <label className="field"><span>Je suis</span>
+                <select value={rRole} onChange={e=>setRRole(e.target.value)}>
+                  <option value="voyageur">Voyageur — je planifie des séjours</option>
+                  <option value="hote">Hôte — je propose des hébergements</option>
+                </select>
+              </label>
+              {error && <p className="error">{error}</p>}
+              <button type="submit" className="btn" style={{width:'100%',marginTop:'.25rem'}} disabled={busy}>{busy?'Création…':'Créer mon compte'}</button>
+            </form>
+          )}
         </div>
       </div>
     );

@@ -30,23 +30,31 @@ body{margin:0;background:var(--sand);color:var(--ink);font-family:'DM Sans',syst
 .btn-back{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:var(--muted);font-size:.9rem;display:block;margin-bottom:.75rem;}
 .btn-back:hover{color:var(--terra);}
 
-/* ── Page connexion (two-column, inspirée du style Airbnb) ── */
-.login-page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
-.login-left{background:linear-gradient(160deg,var(--forest-deep) 0%,var(--forest) 100%);padding:4rem 3rem;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
-.login-left::before{content:'';position:absolute;top:-30%;left:-30%;width:160%;height:160%;background:radial-gradient(ellipse at 40% 40%,rgba(181,97,59,.25) 0%,transparent 60%);pointer-events:none;}
-.login-title{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(2.2rem,4vw,3.2rem);line-height:1.05;color:#faf6ef;letter-spacing:-.02em;margin:0 0 .5rem;position:relative;}
-.login-features{margin-top:2rem;display:flex;flex-direction:column;gap:.75rem;position:relative;}
-.login-feat{display:flex;align-items:center;gap:.75rem;font-size:.95rem;color:rgba(250,246,239,.65);}
-.login-right{display:grid;place-items:center;padding:2rem;background:var(--sand);}
-.auth-card{width:min(420px,100%);}
-.auth-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.8rem;line-height:1.1;margin:0 0 .25rem;}
-.auth-sub{margin:0 0 1.5rem;}
+/* ── Page connexion — fond terracotta, card blanche centrée ── */
+html,body{height:100%;}
+.login-page{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;
+  background:linear-gradient(145deg,#a04e2e 0%,var(--terra) 50%,#c97a52 100%);
+}
+.login-card{
+  width:min(440px,100%);padding:2.5rem;
+  background:#fff;border:none;border-radius:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25),0 4px 12px rgba(0,0,0,.12);
+}
+.login-card-header{margin-bottom:1.75rem;border-bottom:1px solid var(--line);padding-bottom:1.5rem;text-align:center;}
+.login-logo{width:160px;height:auto;display:block;margin:0 auto .75rem;}
+.login-title{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(1.3rem,3vw,1.7rem);line-height:1.15;color:var(--ink);letter-spacing:-.01em;margin:0;text-align:center;}
+/* ── Onglets auth ── */
+.auth-tabs{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--sand);}
+.auth-tab{flex:1;font:inherit;font-size:.9rem;font-weight:500;cursor:pointer;padding:.6rem 1rem;border:none;background:transparent;color:var(--muted);transition:background .15s,color .15s;}
+.auth-tab.active{background:var(--terra);color:#fff;font-weight:600;}
+.auth-tab:not(.active):hover{background:var(--line);}
 .form{display:grid;gap:1rem;}
 .field{display:grid;gap:.35rem;}
-.field span{font-size:.85rem;font-weight:500;}
-.field input,.field select{font:inherit;padding:.7rem .85rem;border:1px solid var(--line);border-radius:10px;background:var(--sand);}
-.field input:focus,.field select:focus{outline:none;border-color:var(--terra);background:var(--paper);}
-@media(max-width:680px){.login-page{grid-template-columns:1fr;}.login-left{display:none;}}
+.field span{font-size:.85rem;font-weight:500;color:var(--muted);}
+.field input,.field select{font:inherit;padding:.7rem .85rem;border:1px solid var(--line);border-radius:10px;background:var(--sand);color:var(--ink);}
+.field input:focus,.field select:focus{outline:none;border-color:var(--terra);background:#fff;}
+@media(max-width:480px){.login-card{padding:1.75rem 1.25rem;border-radius:16px;}}
 
 /* ── Hero (inspiré du hero Pablo, adapté au slow travel) ── */
 .catalogue-page{min-height:100vh;}
