@@ -81,21 +81,25 @@ html,body{height:100%;}
 .stat-l{display:block;font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-top:.35rem;}
 
 /* ── Grille ── */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;margin-top:1rem;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;margin-top:1rem;}
 
-/* ── Cartes destination (enrichies, style Pablo) ── */
-.dest-card{padding:0;cursor:pointer;transition:transform .15s,box-shadow .15s;overflow:hidden;}
-.dest-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(43,42,38,.12);}
-.dest-card-img{height:130px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0e7d8 0%,#e7ddcd 100%);position:relative;}
-.dest-emoji{font-size:3.5rem;line-height:1;}
-.dest-count{position:absolute;bottom:.6rem;right:.75rem;font-size:.72rem;font-weight:600;background:rgba(43,42,38,.65);color:#faf6ef;padding:.2rem .55rem;border-radius:999px;backdrop-filter:blur(4px);}
-.dest-card-body{padding:1.25rem 1.5rem 1.5rem;}
-.dest-meta{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;}
-.dest-name{font-family:'Fraunces',serif;font-weight:600;font-size:1.4rem;margin:0 0 .4rem;}
-.dest-desc{margin:0 0 .6rem;font-size:.9rem;}
-.dest-price{font-size:.9rem;margin:.5rem 0 0;color:var(--muted);}
-.dest-price strong{color:var(--terra);font-size:1.05rem;}
-.voir-plus{display:inline-block;margin-top:.75rem;font-size:.85rem;color:var(--terra);font-weight:600;}
+/* ── Cartes destination ── */
+.dest-card{padding:0;cursor:pointer;transition:transform .18s,box-shadow .18s;overflow:hidden;border-radius:var(--radius);}
+.dest-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(43,42,38,.14);}
+.dest-card-img{height:210px;position:relative;overflow:hidden;background:#e7ddcd;}
+.dest-card-photo{width:100%;height:100%;object-fit:cover;transition:transform .45s ease;display:block;}
+.dest-card:hover .dest-card-photo{transform:scale(1.06);}
+.dest-emoji{font-size:3.5rem;line-height:1;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+.dest-card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,18,14,.6) 0%,rgba(20,18,14,.05) 55%,transparent 100%);display:flex;align-items:flex-end;justify-content:space-between;padding:.65rem .8rem;}
+.dest-pays-badge{font-size:.72rem;font-weight:700;color:#fff;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.5);}
+.dest-count{font-size:.72rem;font-weight:600;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);color:#fff;padding:.2rem .55rem;border-radius:999px;border:1px solid rgba(255,255,255,.25);}
+.dest-card-body{padding:1.1rem 1.25rem 1.25rem;display:flex;flex-direction:column;gap:.35rem;}
+.dest-name{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;margin:0;line-height:1.15;}
+.dest-desc{margin:0;font-size:.85rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;}
+.dest-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.4rem;}
+.dest-price{font-size:.88rem;margin:0;color:var(--muted);}
+.dest-price strong{color:var(--terra);font-size:1rem;font-weight:700;}
+.voir-plus{font-size:.83rem;color:var(--terra);font-weight:600;white-space:nowrap;}
 
 /* Tags */
 .tag{font-size:.72rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:#f0e7d8;color:var(--forest);display:inline-block;}

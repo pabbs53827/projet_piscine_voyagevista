@@ -35,7 +35,7 @@
   const fmtDate = iso => !iso ? '—' : new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   const fmtDatetime = iso => !iso ? '—' : new Date(iso).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   function destEmoji(pays='',region='') {
-    const p=pays.toLowerCase(), r=region.toLowerCase();
+    const p=(pays||'').toLowerCase(), r=(region||'').toLowerCase();
     if(p.includes('japon'))return'🏯'; if(p.includes('thaïlande')||p.includes('thai'))return'🌸';
     if(p.includes('portugal'))return'🌊'; if(p.includes('mexique'))return'🌵';
     if(p.includes('indonés'))return'🌺'; if(p.includes('grèce'))return'🏛️';
@@ -207,15 +207,21 @@
                   onClick={()=>nav('destination',d)} role="button" tabIndex={0}
                   onKeyDown={e=>e.key==='Enter'&&nav('destination',d)}>
                   <div className="dest-card-img">
-                    <span className="dest-emoji">{destEmoji(d.pays,d.region)}</span>
-                    {d.nb_hebergements>0 && <span className="dest-count">{d.nb_hebergements} hébt{d.nb_hebergements>1?'s':''}</span>}
+                    {d.image_url
+                      ? <img src={d.image_url} alt={d.nom} className="dest-card-photo"/>
+                      : <span className="dest-emoji">{destEmoji(d.pays,d.region)}</span>}
+                    <div className="dest-card-overlay">
+                      <span className="dest-pays-badge">{d.pays}</span>
+                      {d.nb_hebergements>0&&<span className="dest-count">{d.nb_hebergements} héb.</span>}
+                    </div>
                   </div>
                   <div className="dest-card-body">
-                    <div className="dest-meta"><span className="tag">{d.pays}</span>{d.region&&<span className="muted small">{d.region}</span>}</div>
                     <h2 className="dest-name">{d.nom}</h2>
-                    <p className="muted dest-desc">{d.description}</p>
-                    {d.prix_min&&<p className="dest-price">À partir de <strong>{Number(d.prix_min).toFixed(0)} €</strong> <span className="muted small">/ semaine</span></p>}
-                    <span className="voir-plus">Explorer ce séjour →</span>
+                    <p className="dest-desc">{d.description}</p>
+                    <div className="dest-card-footer">
+                      {d.prix_min&&<p className="dest-price">À partir de <strong>{Number(d.prix_min).toFixed(0)} €</strong><span className="muted small"> / sem.</span></p>}
+                      <span className="voir-plus">Explorer →</span>
+                    </div>
                   </div>
                 </article>
               ))}
