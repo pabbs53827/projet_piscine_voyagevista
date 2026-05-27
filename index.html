@@ -12,6 +12,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -92,6 +93,36 @@
         </div>
       </header>
     );
+  }
+
+  /* ─ Globe 3D ─ */
+  function GlobeView({destinations, nav}) {
+    const ref = useRef(null);
+    useEffect(()=>{
+      if(!ref.current || !window.Globe) return;
+      const el = ref.current;
+      const w = el.offsetWidth || 800;
+      const h = Math.min(Math.round(w * 0.58), 540);
+      const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+      const g = window.Globe()
+        .width(w).height(h)
+        .backgroundColor('rgba(0,0,0,0)')
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+        .atmosphereColor(isDark?'#4a7a8a':'#6ab0c8')
+        .atmosphereAltitude(0.15)
+        .pointsData(destinations.filter(d=>d.latitude&&d.longitude))
+        .pointLat('latitude').pointLng('longitude')
+        .pointColor(()=>'#b5613b').pointRadius(.45).pointAltitude(.025)
+        .pointLabel(d=>`<div style="font:600 13px/1.4 sans-serif;padding:6px 10px;background:rgba(20,18,14,.85);color:#faf6ef;border-radius:8px;border:1px solid rgba(255,255,255,.15)">${d.nom}<br/><span style="font-weight:400;opacity:.7;font-size:11px">${d.pays}</span></div>`)
+        .onPointClick(d=>nav('destination',d))
+        (el);
+      g.controls().autoRotate = true;
+      g.controls().autoRotateSpeed = 0.6;
+      g.pointOfView({altitude:2.2});
+      return ()=>{ el.innerHTML=''; };
+    },[]);
+    return <div ref={ref} style={{width:'100%',borderRadius:'var(--radius)',overflow:'hidden',background:document.documentElement.getAttribute('data-theme')==='dark'?'#0d1117':'#0a1628'}}/>;
   }
 
   /* ─ Modale de confirmation ─ */
@@ -194,6 +225,7 @@
     const [q,setQ]       = useState('');
     const [pays,setPays] = useState('');
     const [sort,setSort] = useState('nom');
+    const [view,setView] = useState('liste');
     const [loading,setLoading] = useState(true);
     const [error,setError]     = useState('');
     useEffect(()=>{ load(); },[]);
@@ -260,10 +292,17 @@
             </label>
           </div>
           <section className="detail-section">
-            <h2 className="section-title">Destinations</h2>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+              <h2 className="section-title" style={{margin:0,border:'none'}}>Destinations</h2>
+              <div className="view-toggle">
+                <button className={view==='liste'?'active':''} onClick={()=>setView('liste')}>⊞ Liste</button>
+                <button className={view==='globe'?'active':''} onClick={()=>setView('globe')}>🌍 Globe</button>
+              </div>
+            </div>
             {loading && <p className="muted">Chargement…</p>}
             {error   && <p className="error">{error}</p>}
-            <div className="grid">
+            {view==='globe'&&!loading&&<GlobeView destinations={destinations} nav={nav}/>}
+            <div className="grid" style={{display:view==='globe'?'none':'grid'}}>
               {destinations.map(d=>(
                 <article key={d.id_destination} className="card dest-card"
                   onClick={()=>nav('destination',d)} role="button" tabIndex={0}
