@@ -47,8 +47,14 @@
   /* ─ Topbar ─ */
   function Topbar({user,onLogout,nav,nbNotifs=0,nbItems=0,variant}) {
     const [menuOpen,setMenuOpen] = useState(false);
+    const [darkMode,setDarkMode] = useState(()=>document.documentElement.getAttribute('data-theme')==='dark');
     const menuRef = useRef(null);
     const dark = variant==='dark';
+    function toggleDark(){
+      const next=!darkMode; setDarkMode(next);
+      document.documentElement.setAttribute('data-theme',next?'dark':'');
+      localStorage.setItem('darkMode',next?'1':'0');
+    }
     useEffect(()=>{
       if(!menuOpen) return;
       const handle = e => { if(menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
@@ -78,6 +84,7 @@
                   Notifications {nbNotifs>0&&<span className="notif-badge">{nbNotifs}</span>}
                 </button>
                 <button onClick={()=>go('profil')}>Mon profil</button>
+                <button onClick={toggleDark}>{darkMode?'☀️ Mode clair':'🌙 Mode sombre'}</button>
                 <button className="menu-logout" onClick={()=>{onLogout();setMenuOpen(false);}}>Déconnexion</button>
               </div>
             )}
@@ -314,12 +321,28 @@
     const [busy,setBusy]   = useState(false);
     const [scrolled,setScrolled]         = useState(false);
     const [sejourResume,setSejourResume] = useState({n:0, total:0});
+    const [meteo,setMeteo]               = useState(null);
 
     useEffect(()=>{
       const handle = ()=>setScrolled(window.scrollY > 320);
       window.addEventListener('scroll', handle, {passive:true});
       return ()=>window.removeEventListener('scroll', handle);
     },[]);
+
+    useEffect(()=>{
+      fetch(`https://wttr.in/${encodeURIComponent(destination.nom)}?format=j1`)
+        .then(r=>r.json())
+        .then(d=>{
+          const c=d.current_condition[0];
+          const code=parseInt(c.weatherCode);
+          const icon=code===113?'☀️':code===116?'⛅':[119,122].includes(code)?'☁️':
+            code===143?'🌫️':[176,263,266,293,296].includes(code)?'🌦️':
+            [299,302,305,308,311,314,353,356].includes(code)?'🌧️':
+            [179,227,230,317,320,323,326,368,371].includes(code)?'❄️':
+            [200,386,389].includes(code)?'⛈️':'🌡️';
+          setMeteo({temp:c.temp_C, icon});
+        }).catch(()=>{});
+    },[destination.nom]);
 
     useEffect(()=>{
       Promise.all([
@@ -413,6 +436,7 @@
               <div>
                 <span className="dest-banner-pays">{destination.pays}{destination.region&&` · ${destination.region}`}</span>
                 <h1 className="dest-banner-title">{destination.nom}</h1>
+                {meteo&&<div className="dest-meteo">{meteo.icon} {meteo.temp}°C</div>}
               </div>
             </div>
           </div>
@@ -1154,6 +1178,8 @@
   }
 
   /* ─ Application ─ */
+  if(localStorage.getItem('darkMode')==='1') document.documentElement.setAttribute('data-theme','dark');
+
   function App(){
     const [user,setUser]         = useState(null);
     const [loading,setLoading]   = useState(true);
