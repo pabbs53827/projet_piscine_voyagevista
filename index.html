@@ -16,7 +16,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef } = React;
 
   /* ─ API ─ */
   const API = 'api';
@@ -45,22 +45,42 @@
   const transportIcon = t => ({avion:'✈️',train:'🚂',bus:'🚌',ferry:'⛴️'}[t]||'🚗');
 
   /* ─ Topbar ─ */
-  function Topbar({user,onLogout,nav,nbNotifs=0,variant}) {
+  function Topbar({user,onLogout,nav,nbNotifs=0,nbItems=0,variant}) {
+    const [menuOpen,setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
     const dark = variant==='dark';
+    useEffect(()=>{
+      if(!menuOpen) return;
+      const handle = e => { if(menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+      document.addEventListener('mousedown', handle);
+      return ()=>document.removeEventListener('mousedown', handle);
+    },[menuOpen]);
+    function go(v){ nav(v); setMenuOpen(false); }
     return (
       <header className={`topbar${dark?' topbar-dark':''}`}>
         <p className="brand" onClick={()=>nav('catalogue')} style={{cursor:'pointer'}}>VoyageVista</p>
-        <div className="topbar-right">
+        <div className="topbar-right" ref={menuRef}>
           {user && <>
             <span className={dark?'topbar-muted':'muted'}>Bonjour, {user.prenom}</span>
-            {user.role==='hote'  && <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('hote')}>Espace hôte</button>}
-            {user.role==='admin' && <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('admin')}>Espace admin</button>}
-            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('panier')}>Mon séjour</button>
-            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('notifications')}>
-              Notifs {nbNotifs>0 && <span className="notif-badge">{nbNotifs}</span>}
+            <button className={`btn-hamburger${dark?' btn-hamburger-dark':''}`}
+              onClick={()=>setMenuOpen(o=>!o)} aria-label="Menu">
+              <span>{menuOpen?'✕':'☰'}</span>
+              {(nbNotifs>0||nbItems>0)&&!menuOpen&&<span className="hamburger-dot"/>}
             </button>
-            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('profil')}>Mon profil</button>
-            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={onLogout}>Déconnexion</button>
+            {menuOpen&&(
+              <div className="topbar-menu">
+                {user.role==='hote'  && <button onClick={()=>go('hote')}>Espace hôte</button>}
+                {user.role==='admin' && <button onClick={()=>go('admin')}>Espace admin</button>}
+                <button onClick={()=>go('panier')}>
+                  Mon séjour {nbItems>0&&<span className="notif-badge">{nbItems}</span>}
+                </button>
+                <button onClick={()=>go('notifications')}>
+                  Notifications {nbNotifs>0&&<span className="notif-badge">{nbNotifs}</span>}
+                </button>
+                <button onClick={()=>go('profil')}>Mon profil</button>
+                <button className="menu-logout" onClick={()=>{onLogout();setMenuOpen(false);}}>Déconnexion</button>
+              </div>
+            )}
           </>}
         </div>
       </header>
@@ -146,7 +166,7 @@
   }
 
   /* ─ Catalogue ─ */
-  function Catalogue({user,onLogout,nav,nbNotifs}) {
+  function Catalogue({user,onLogout,nav,nbNotifs,nbItems=0}) {
     const [destinations,setDestinations] = useState([]);
     const [paysList,setPaysList]         = useState([]);
     const [q,setQ]       = useState('');
@@ -169,14 +189,37 @@
     return (
       <div className="catalogue-page">
         <section className="hero-section">
-          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} variant="dark"/>
+          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark"/>
           <div className="hero-content">
             <img src="logo.png" alt="VoyageVista" className="hero-logo"/>
+            <p className="hero-sub">Partez vraiment. Restez plus longtemps.<br/>Vivez là-bas comme un·e local·e.</p>
             <form onSubmit={e=>{e.preventDefault();load();}} className="hero-search">
               <span className="hero-search-icon">🔍</span>
               <input type="text" placeholder="Destination, pays, région…" value={q} onChange={e=>setQ(e.target.value)}/>
               <button type="submit" className="btn-hero">Rechercher</button>
             </form>
+          </div>
+        </section>
+        <section className="howto-section">
+          <div className="page">
+            <h2 className="howto-title">Comment ça marche</h2>
+            <div className="howto-grid">
+              <div className="howto-step">
+                <span className="howto-icon">🗺️</span>
+                <h3>Choisissez une destination</h3>
+                <p>Explorez plus de 20 destinations authentiques, soigneusement sélectionnées pour un voyage en profondeur.</p>
+              </div>
+              <div className="howto-step">
+                <span className="howto-icon">🏠</span>
+                <h3>Composez votre séjour</h3>
+                <p>Ajoutez hébergements, transports et expériences locales à votre itinéraire, à votre rythme.</p>
+              </div>
+              <div className="howto-step">
+                <span className="howto-icon">✈️</span>
+                <h3>Partez l'esprit libre</h3>
+                <p>Confirmez en un clic — tout est prêt pour votre aventure slow travel.</p>
+              </div>
+            </div>
           </div>
         </section>
         <div className="page">
@@ -234,7 +277,7 @@
   }
 
   /* ─ Détail destination ─ */
-  function DestinationDetail({destination,user,onLogout,nav,nbNotifs}) {
+  function DestinationDetail({destination,user,onLogout,nav,nbNotifs,nbItems=0}) {
     const [data,setData]         = useState(null);
     const [loading,setLoading]   = useState(true);
     const [sejourId,setSejourId] = useState(null);
@@ -323,7 +366,7 @@
             : <div className="dest-banner-placeholder"/>}
           <div className="dest-banner-overlay">
             <div className="dest-banner-topbar">
-              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} variant="dark"/>
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark"/>
             </div>
             <div className="dest-banner-content">
               <button className="btn-back-banner" onClick={()=>nav('catalogue')}>← Retour</button>
@@ -475,7 +518,7 @@
   }
 
   /* ─ Panier ─ */
-  function Panier({user,onLogout,nav,nbNotifs}) {
+  function Panier({user,onLogout,nav,nbNotifs,nbItems=0}) {
     const [data,setData]         = useState(null);
     const [loading,setLoading]   = useState(true);
     const [busy,setBusy]         = useState(false);
@@ -527,7 +570,7 @@
 
     if(showPaiement) return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>setShowPaiement(false)}>← Retour au séjour</button>
           <h1 className="detail-title">Paiement</h1>
@@ -559,7 +602,7 @@
 
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mon séjour</h1>
@@ -667,7 +710,7 @@
   }
 
   /* ─ Profil ─ */
-  function Profil({user,onLogout,nav}){
+  function Profil({user,onLogout,nav,nbNotifs=0,nbItems=0}){
     const [profil,setProfil]   = useState(null);
     const [loading,setLoading] = useState(true);
     const [edit,setEdit]       = useState(false);
@@ -690,7 +733,7 @@
     const roleLabel={voyageur:'Voyageur',hote:'Hôte',admin:'Administrateur'};
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mon profil</h1>
@@ -726,7 +769,7 @@
   }
 
   /* ─ Notifications ─ */
-  function Notifications({user,onLogout,nav}){
+  function Notifications({user,onLogout,nav,nbNotifs=0,nbItems=0}){
     const [notifs,setNotifs]   = useState([]);
     const [loading,setLoading] = useState(true);
     useEffect(()=>{ api('notifications.php').then(d=>setNotifs(d.notifications)).finally(()=>setLoading(false)); },[]);
@@ -734,7 +777,7 @@
     const icons={reservation_confirmee:'✓',depart_proche:'✈',modification:'📝',activite_a_venir:'⭐',systeme:'ℹ'};
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Notifications</h1>
@@ -754,7 +797,7 @@
   }
 
   /* ─ Espace hôte ─ */
-  function HoteDashboard({user,onLogout,nav}){
+  function HoteDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0}){
     const [data,setData]         = useState(null);
     const [destinations,setDests] = useState([]);
     const [loading,setLoading]   = useState(true);
@@ -801,7 +844,7 @@
     if(loading)return <div className="screen-center muted">Chargement…</div>;
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace hôte</h1>
           <p className="muted">Gérez vos hébergements et vos expériences locales.</p>
@@ -903,7 +946,7 @@
   }
 
   /* ─ Espace admin ─ */
-  function AdminDashboard({user,onLogout,nav}){
+  function AdminDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0}){
     const [data,setData]     = useState(null);
     const [loading,setLoading] = useState(true);
     const [msg,setMsg]   = useState('');
@@ -936,7 +979,7 @@
     const s=data?.stats??{};
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace admin</h1>
           <p className="muted">Gérez les destinations et modérez les contenus.</p>
@@ -1070,10 +1113,14 @@
     const [vue,setVue]           = useState('catalogue');
     const [vueData,setVueData]   = useState(null);
     const [nbNotifs,setNbNotifs] = useState(0);
+    const [nbItems,setNbItems]   = useState(0);
     useEffect(()=>{ api('me.php').then(d=>setUser(d.user)).catch(()=>setUser(null)).finally(()=>setLoading(false)); },[]);
     useEffect(()=>{
       if(!user)return;
       api('notifications.php').then(d=>setNbNotifs(d.nb_non_lues)).catch(()=>{});
+      api('mon_sejour.php').then(d=>{
+        setNbItems((d.hebergements?.length||0)+(d.transports?.length||0)+(d.activites?.length||0));
+      }).catch(()=>{});
     },[user,vue]);
     async function login(email,mot_de_passe){
       const d=await api('login.php',{method:'POST',body:JSON.stringify({email,mot_de_passe})});
@@ -1088,7 +1135,7 @@
     if(loading)return <div className="screen-center muted">Chargement…</div>;
     if(!user)  return <Login onLogin={login}/>;
 
-    const common={user,onLogout:logout,nav,nbNotifs};
+    const common={user,onLogout:logout,nav,nbNotifs,nbItems};
     if(vue==='confirmation'&&vueData) return <Confirmation infos={vueData} nav={nav}/>;
     if(vue==='panier')                return <Panier {...common}/>;
     if(vue==='notifications')         return <Notifications {...common}/>;
