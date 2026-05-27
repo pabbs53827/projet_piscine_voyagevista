@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VoyageVista — Slow travel</title>
+  <title>VoyageVista</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🌿</text></svg>"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -171,7 +171,7 @@
         <section className="hero-section">
           <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} variant="dark"/>
           <div className="hero-content">
-            <h1 className="hero-title">Vivez là-bas.<br/>Pas juste de passage.</h1>
+            <img src="logo.png" alt="VoyageVista" className="hero-logo"/>
             <form onSubmit={e=>{e.preventDefault();load();}} className="hero-search">
               <span className="hero-search-icon">🔍</span>
               <input type="text" placeholder="Destination, pays, région…" value={q} onChange={e=>setQ(e.target.value)}/>
@@ -243,7 +243,8 @@
     const [capaMin,setCapaMin]   = useState('');
     // hébergement
     const [hebSel,setHebSel]     = useState(null);
-    const [dispoPick,setDispoPick] = useState(null);
+    const [dateDebut,setDateDebut] = useState('');
+    const [dateFin,setDateFin]     = useState('');
     // activité
     const [actSel,setActSel]     = useState(null);
     const [crenPick,setCrenPick] = useState(null);
@@ -263,15 +264,24 @@
         .catch(err=>setMsg(err.message)).finally(()=>setLoading(false));
     },[destination.id_destination]);
 
-    async function ouvrirHeb(h){
+    function ouvrirHeb(h){
       setMsg(''); setActSel(null); setShowTr(false);
-      const d=await api(`dispos.php?hebergement=${h.id_hebergement}`);
-      setHebSel({heb:h,dispos:d.dispos}); setDispoPick(d.dispos[0]?.id_dispo??null);
+      const d1=new Date(); d1.setDate(d1.getDate()+1);
+      const d2=new Date(); d2.setDate(d2.getDate()+8);
+      const fmt=d=>d.toISOString().split('T')[0];
+      setDateDebut(fmt(d1)); setDateFin(fmt(d2));
+      setHebSel(h);
+    }
+    function previewPrix(h){
+      if(!dateDebut||!dateFin) return null;
+      const j=Math.round((new Date(dateFin)-new Date(dateDebut))/86400000);
+      if(j<1) return null;
+      return Math.max(1,Math.ceil(j/7))*Number(h.prix_semaine);
     }
     async function reserverHeb(){
-      if(!dispoPick)return; setBusy(true); setMsg('');
+      if(!hebSel||!dateDebut||!dateFin) return; setBusy(true); setMsg('');
       try{
-        await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_dispo:dispoPick})});
+        await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_hebergement:hebSel.id_hebergement,date_debut:dateDebut,date_fin:dateFin})});
         setMsg('✓ Hébergement ajouté à votre séjour !'); setHebSel(null);
       }catch(err){setMsg(err.message);}finally{setBusy(false);}
     }
@@ -338,21 +348,25 @@
                 <div className="card-tag-row"><span className="tag">{h.type}</span><span className="tag">👥 {h.capacite} pers.</span></div>
                 <h3 className="card-title">{h.nom}</h3>
                 <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
-                <p className="muted small">Durée min. : {h.duree_min_nuits} nuits</p>
-                {h.prochaine_dispo?<p className="dispo-ok">✓ Disponible dès le {fmtDate(h.prochaine_dispo)}</p>:<p className="dispo-none">Aucune disponibilité</p>}
-                {h.prochaine_dispo&&<button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>}
-                {hebSel?.heb.id_hebergement===h.id_hebergement&&(
+                <button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>
+                {hebSel?.id_hebergement===h.id_hebergement&&(
                   <div className="booking-panel">
-                    <p className="booking-label">Choisissez une période :</p>
-                    {hebSel.dispos.length===0?<p className="muted small">Aucune période.</p>
-                      :hebSel.dispos.map(dp=>(
-                        <label key={dp.id_dispo} className="picker-item">
-                          <input type="radio" name="dispo" checked={dispoPick===dp.id_dispo} onChange={()=>setDispoPick(dp.id_dispo)}/>
-                          <span>{fmtDate(dp.date_debut)} → {fmtDate(dp.date_fin)}</span>
-                        </label>
-                      ))}
+                    <p className="booking-label">Choisissez vos dates</p>
+                    <div className="date-picker-row">
+                      <label className="field" style={{flex:1}}>
+                        <span>Arrivée</span>
+                        <input type="date" value={dateDebut} min={new Date().toISOString().split('T')[0]}
+                          onChange={e=>{setDateDebut(e.target.value); if(dateFin&&e.target.value>=dateFin){const d=new Date(e.target.value);d.setDate(d.getDate()+7);setDateFin(d.toISOString().split('T')[0]);}}}/>
+                      </label>
+                      <label className="field" style={{flex:1}}>
+                        <span>Départ</span>
+                        <input type="date" value={dateFin} min={dateDebut||new Date().toISOString().split('T')[0]}
+                          onChange={e=>setDateFin(e.target.value)}/>
+                      </label>
+                    </div>
+                    {previewPrix(h)&&<p className="prix-preview">Total estimé : <strong>{previewPrix(h).toFixed(0)} €</strong> <span className="muted small">({Math.max(1,Math.ceil(Math.round((new Date(dateFin)-new Date(dateDebut))/86400000)/7))} sem.)</span></p>}
                     <div className="booking-actions">
-                      <button className="btn" disabled={busy||!dispoPick} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
+                      <button className="btn" disabled={busy||!dateDebut||!dateFin} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
                       <button className="btn-ghost" onClick={()=>setHebSel(null)}>Annuler</button>
                     </div>
                   </div>
