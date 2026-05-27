@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VoyageVista — Slow travel</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🌿</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect } = React;
+
+  /* ─ API ─ */
+  const API = 'api';
+  async function api(path, options = {}) {
+    const res = await fetch(`${API}/${path}`, {
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(options.headers||{}) },
+      ...options,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+    return data;
+  }
+
+  /* ─ Helpers ─ */
+  const fmtDate = iso => !iso ? '—' : new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const fmtDatetime = iso => !iso ? '—' : new Date(iso).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  function destEmoji(pays='',region='') {
+    const p=pays.toLowerCase(), r=region.toLowerCase();
+    if(p.includes('japon'))return'🏯'; if(p.includes('thaïlande')||p.includes('thai'))return'🌸';
+    if(p.includes('portugal'))return'🌊'; if(p.includes('mexique'))return'🌵';
+    if(p.includes('indonés'))return'🌺'; if(p.includes('grèce'))return'🏛️';
+    if(p.includes('géorgie'))return'🏔️'; if(r.includes('nord'))return'🌲';
+    return'🌍';
+  }
+  const transportIcon = t => ({avion:'✈️',train:'🚂',bus:'🚌',ferry:'⛴️'}[t]||'🚗');
+
+  /* ─ Topbar ─ */
+  function Topbar({user,onLogout,nav,nbNotifs=0,variant}) {
+    const dark = variant==='dark';
+    return (
+      <header className={`topbar${dark?' topbar-dark':''}`}>
+        <p className="brand" onClick={()=>nav('catalogue')} style={{cursor:'pointer'}}>VoyageVista</p>
+        <div className="topbar-right">
+          {user && <>
+            <span className={dark?'topbar-muted':'muted'}>Bonjour, {user.prenom}</span>
+            {user.role==='hote'  && <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('hote')}>Espace hôte</button>}
+            {user.role==='admin' && <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('admin')}>Espace admin</button>}
+            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('panier')}>Mon séjour</button>
+            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('notifications')}>
+              Notifs {nbNotifs>0 && <span className="notif-badge">{nbNotifs}</span>}
+            </button>
+            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={()=>nav('profil')}>Mon profil</button>
+            <button className={dark?'btn-nav-dark':'btn-ghost'} onClick={onLogout}>Déconnexion</button>
+          </>}
+        </div>
+      </header>
+    );
+  }
+
+  /* ─ Connexion / Inscription ─ */
+  function Login({onLogin}) {
+    const [mode, setMode] = useState('login');
+    // login
+    const [email, setEmail]   = useState('lucas@example.com');
+    const [mdp, setMdp]       = useState('password');
+    // register
+    const [rEmail, setREmail]   = useState('');
+    const [rMdp, setRMdp]       = useState('');
+    const [rNom, setRNom]       = useState('');
+    const [rPrenom, setRPrenom] = useState('');
+    const [rRole, setRRole]     = useState('voyageur');
+    const [error, setError] = useState('');
+    const [busy, setBusy]   = useState(false);
+
+    async function submitLogin(e) {
+      e.preventDefault(); setError(''); setBusy(true);
+      try { await onLogin(email, mdp); }
+      catch(err){ setError(err.message); } finally { setBusy(false); }
+    }
+    async function submitRegister(e) {
+      e.preventDefault(); setError(''); setBusy(true);
+      try {
+        await api('register.php',{method:'POST',body:JSON.stringify({email:rEmail,mot_de_passe:rMdp,nom:rNom,prenom:rPrenom,role:rRole})});
+        await onLogin(rEmail, rMdp);
+      } catch(err){ setError(err.message); } finally { setBusy(false); }
+    }
+
+    return (
+      <div className="login-page">
+        <div className="login-left">
+          <p className="brand" style={{color:'#faf6ef',marginBottom:'2rem'}}>VoyageVista</p>
+          <h1 className="login-title">Vivez là-bas.<br/>Pas juste de passage.</h1>
+        </div>
+        <div className="login-right">
+          <div className="card auth-card">
+            <div className="auth-tabs">
+              <button className={`auth-tab${mode==='login'?' active':''}`} onClick={()=>{setMode('login');setError('');}}>Se connecter</button>
+              <button className={`auth-tab${mode==='register'?' active':''}`} onClick={()=>{setMode('register');setError('');}}>Créer un compte</button>
+            </div>
+
+            {mode==='login' ? (
+              <form onSubmit={submitLogin} className="form">
+                <label className="field"><span>Email</span>
+                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="username"/>
+                </label>
+                <label className="field"><span>Mot de passe</span>
+                  <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)} required autoComplete="current-password"/>
+                </label>
+                {error && <p className="error">{error}</p>}
+                <button type="submit" className="btn" disabled={busy}>{busy?'Connexion…':'Se connecter'}</button>
+              </form>
+            ) : (
+              <form onSubmit={submitRegister} className="form">
+                <div className="form-row">
+                  <label className="field"><span>Prénom</span><input value={rPrenom} onChange={e=>setRPrenom(e.target.value)} required/></label>
+                  <label className="field"><span>Nom</span><input value={rNom} onChange={e=>setRNom(e.target.value)} required/></label>
+                </div>
+                <label className="field"><span>Email</span>
+                  <input type="email" value={rEmail} onChange={e=>setREmail(e.target.value)} required autoComplete="email"/>
+                </label>
+                <label className="field"><span>Mot de passe (8 caractères min.)</span>
+                  <input type="password" value={rMdp} onChange={e=>setRMdp(e.target.value)} required minLength={8} autoComplete="new-password"/>
+                </label>
+                <label className="field"><span>Je suis</span>
+                  <select value={rRole} onChange={e=>setRRole(e.target.value)}>
+                    <option value="voyageur">Voyageur — je planifie des séjours</option>
+                    <option value="hote">Hôte — je propose des hébergements</option>
+                  </select>
+                </label>
+                {error && <p className="error">{error}</p>}
+                <button type="submit" className="btn" disabled={busy}>{busy?'Création…':'Créer mon compte'}</button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─ Catalogue ─ */
+  function Catalogue({user,onLogout,nav,nbNotifs}) {
+    const [destinations,setDestinations] = useState([]);
+    const [paysList,setPaysList]         = useState([]);
+    const [q,setQ]       = useState('');
+    const [pays,setPays] = useState('');
+    const [sort,setSort] = useState('nom');
+    const [loading,setLoading] = useState(true);
+    const [error,setError]     = useState('');
+    useEffect(()=>{ load(); },[]);
+    async function load(overrides={}) {
+      setLoading(true); setError('');
+      const p=new URLSearchParams({q:overrides.q??q, pays:overrides.pays??pays, sort:overrides.sort??sort});
+      try {
+        const d=await api(`destinations.php?${p}`);
+        setDestinations(d.destinations);
+        if(d.pays?.length) setPaysList(d.pays);
+      } catch(err){ setError(err.message); } finally { setLoading(false); }
+    }
+    function handleSort(v){setSort(v);load({sort:v});}
+    function handlePays(v){setPays(v);load({pays:v});}
+    return (
+      <div className="catalogue-page">
+        <section className="hero-section">
+          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} variant="dark"/>
+          <div className="hero-content">
+            <h1 className="hero-title">Vivez là-bas.<br/>Pas juste de passage.</h1>
+            <form onSubmit={e=>{e.preventDefault();load();}} className="hero-search">
+              <span className="hero-search-icon">🔍</span>
+              <input type="text" placeholder="Destination, pays, région…" value={q} onChange={e=>setQ(e.target.value)}/>
+              <button type="submit" className="btn-hero">Rechercher</button>
+            </form>
+          </div>
+        </section>
+        <div className="page">
+          <div className="filter-bar">
+            <label className="filter-item">
+              <span>Pays</span>
+              <select value={pays} onChange={e=>handlePays(e.target.value)}>
+                <option value="">Tous</option>
+                {paysList.map(p=><option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label className="filter-item">
+              <span>Trier par</span>
+              <select value={sort} onChange={e=>handleSort(e.target.value)}>
+                <option value="nom">Nom</option>
+                <option value="prix_asc">Prix croissant</option>
+                <option value="prix_desc">Prix décroissant</option>
+              </select>
+            </label>
+          </div>
+          <section className="detail-section">
+            <h2 className="section-title">Destinations</h2>
+            {loading && <p className="muted">Chargement…</p>}
+            {error   && <p className="error">{error}</p>}
+            <div className="grid">
+              {destinations.map(d=>(
+                <article key={d.id_destination} className="card dest-card"
+                  onClick={()=>nav('destination',d)} role="button" tabIndex={0}
+                  onKeyDown={e=>e.key==='Enter'&&nav('destination',d)}>
+                  <div className="dest-card-img">
+                    <span className="dest-emoji">{destEmoji(d.pays,d.region)}</span>
+                    {d.nb_hebergements>0 && <span className="dest-count">{d.nb_hebergements} hébt{d.nb_hebergements>1?'s':''}</span>}
+                  </div>
+                  <div className="dest-card-body">
+                    <div className="dest-meta"><span className="tag">{d.pays}</span>{d.region&&<span className="muted small">{d.region}</span>}</div>
+                    <h2 className="dest-name">{d.nom}</h2>
+                    <p className="muted dest-desc">{d.description}</p>
+                    {d.prix_min&&<p className="dest-price">À partir de <strong>{Number(d.prix_min).toFixed(0)} €</strong> <span className="muted small">/ semaine</span></p>}
+                    <span className="voir-plus">Explorer ce séjour →</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {!loading&&destinations.length===0&&<p className="muted">Aucune destination ne correspond.</p>}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─ Détail destination ─ */
+  function DestinationDetail({destination,user,onLogout,nav,nbNotifs}) {
+    const [data,setData]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [sejourId,setSejourId] = useState(null);
+    // filtres hébergements
+    const [prixMax,setPrixMax]   = useState('');
+    const [capaMin,setCapaMin]   = useState('');
+    // hébergement
+    const [hebSel,setHebSel]     = useState(null);
+    const [dispoPick,setDispoPick] = useState(null);
+    // activité
+    const [actSel,setActSel]     = useState(null);
+    const [crenPick,setCrenPick] = useState(null);
+    const [nbPart,setNbPart]     = useState(1);
+    // transport
+    const [trPick,setTrPick]     = useState(null);
+    const [nbPass,setNbPass]     = useState(1);
+    const [showTr,setShowTr]     = useState(false);
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+
+    useEffect(()=>{
+      Promise.all([
+        api(`destination.php?id=${destination.id_destination}`),
+        api('sejour.php',{method:'POST'}),
+      ]).then(([detail,sej])=>{ setData(detail); setSejourId(sej.sejour.id_sejour); })
+        .catch(err=>setMsg(err.message)).finally(()=>setLoading(false));
+    },[destination.id_destination]);
+
+    async function ouvrirHeb(h){
+      setMsg(''); setActSel(null); setShowTr(false);
+      const d=await api(`dispos.php?hebergement=${h.id_hebergement}`);
+      setHebSel({heb:h,dispos:d.dispos}); setDispoPick(d.dispos[0]?.id_dispo??null);
+    }
+    async function reserverHeb(){
+      if(!dispoPick)return; setBusy(true); setMsg('');
+      try{
+        await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_dispo:dispoPick})});
+        setMsg('✓ Hébergement ajouté à votre séjour !'); setHebSel(null);
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function ouvrirAct(a){
+      setMsg(''); setHebSel(null); setShowTr(false);
+      const d=await api(`creneaux.php?activite=${a.id_activite}`);
+      setActSel({act:a,creneaux:d.creneaux}); setCrenPick(d.creneaux[0]?.id_creneau??null); setNbPart(1);
+    }
+    async function reserverAct(){
+      if(!crenPick)return; setBusy(true); setMsg('');
+      try{
+        await api('ajouter_activite.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_creneau:crenPick,nb_participants:nbPart})});
+        setMsg('✓ Activité ajoutée !'); setActSel(null);
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function reserverTransport(){
+      if(!trPick)return; setBusy(true); setMsg('');
+      try{
+        await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass})});
+        setMsg('✓ Transport ajouté à votre séjour !'); setShowTr(false);
+        // rafraîchir les transports
+        const d=await api(`transports.php?destination=${destination.id_destination}`);
+        setData(prev=>({...prev,transports:d.transports}));
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const hebergements = data?.hebergements??[];
+    const activites    = data?.activites??[];
+    const transports   = data?.transports??[];
+
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour aux destinations</button>
+          <div className="detail-hero">
+            <span className="dest-emoji-lg">{destEmoji(destination.pays,destination.region)}</span>
+            <div>
+              <span className="tag">{destination.pays}</span>
+              {destination.region&&<span className="muted small" style={{marginLeft:'.5rem'}}>{destination.region}</span>}
+              <h1 className="detail-title">{destination.nom}</h1>
+              <p className="muted">{destination.description}</p>
+            </div>
+          </div>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+
+        {/* Hébergements */}
+        <section className="detail-section">
+          <h2 className="section-title">Hébergements</h2>
+          <div className="filter-bar" style={{marginBottom:'1rem'}}>
+            <label className="filter-item"><span>Prix max (€/sem)</span>
+              <input type="number" min="0" placeholder="Illimité" value={prixMax} onChange={e=>setPrixMax(e.target.value)} style={{width:'110px'}}/>
+            </label>
+            <label className="filter-item"><span>Capacité min</span>
+              <input type="number" min="1" placeholder="Toutes" value={capaMin} onChange={e=>setCapaMin(e.target.value)} style={{width:'80px'}}/>
+            </label>
+          </div>
+          {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).length===0&&<p className="muted">Aucun hébergement ne correspond aux filtres.</p>}
+          <div className="grid">
+            {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).map(h=>(
+              <article key={h.id_hebergement} className="card heb-card">
+                <div className="card-tag-row"><span className="tag">{h.type}</span><span className="tag">👥 {h.capacite} pers.</span></div>
+                <h3 className="card-title">{h.nom}</h3>
+                <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
+                <p className="muted small">Durée min. : {h.duree_min_nuits} nuits</p>
+                {h.prochaine_dispo?<p className="dispo-ok">✓ Disponible dès le {fmtDate(h.prochaine_dispo)}</p>:<p className="dispo-none">Aucune disponibilité</p>}
+                {h.prochaine_dispo&&<button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>}
+                {hebSel?.heb.id_hebergement===h.id_hebergement&&(
+                  <div className="booking-panel">
+                    <p className="booking-label">Choisissez une période :</p>
+                    {hebSel.dispos.length===0?<p className="muted small">Aucune période.</p>
+                      :hebSel.dispos.map(dp=>(
+                        <label key={dp.id_dispo} className="picker-item">
+                          <input type="radio" name="dispo" checked={dispoPick===dp.id_dispo} onChange={()=>setDispoPick(dp.id_dispo)}/>
+                          <span>{fmtDate(dp.date_debut)} → {fmtDate(dp.date_fin)}</span>
+                        </label>
+                      ))}
+                    <div className="booking-actions">
+                      <button className="btn" disabled={busy||!dispoPick} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
+                      <button className="btn-ghost" onClick={()=>setHebSel(null)}>Annuler</button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Activités */}
+        <section className="detail-section">
+          <h2 className="section-title">Expériences locales</h2>
+          {activites.length===0&&<p className="muted">Aucune activité proposée.</p>}
+          <div className="grid">
+            {activites.map(a=>(
+              <article key={a.id_activite} className="card act-card">
+                <div className="card-tag-row"><span className="tag">{a.categorie}</span><span className="tag">{a.niveau}</span></div>
+                <h3 className="card-title">{a.nom}</h3>
+                <p className="price-tag">{Number(a.prix_personne).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                {a.duree_h&&<p className="muted small">Durée : {a.duree_h}h</p>}
+                {a.prochain_creneau?<p className="dispo-ok">✓ {fmtDatetime(a.prochain_creneau)}</p>:<p className="dispo-none">Complet</p>}
+                {a.prochain_creneau&&<button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirAct(a)}>Ajouter</button>}
+                {actSel?.act.id_activite===a.id_activite&&(
+                  <div className="booking-panel">
+                    <p className="booking-label">Choisissez un créneau :</p>
+                    {actSel.creneaux.map(cr=>(
+                      <label key={cr.id_creneau} className="picker-item">
+                        <input type="radio" name="creneau" checked={crenPick===cr.id_creneau} onChange={()=>setCrenPick(cr.id_creneau)}/>
+                        <span>{fmtDatetime(cr.date_heure)} — {cr.places_restantes} place(s)</span>
+                      </label>
+                    ))}
+                    <label className="field" style={{marginTop:'.5rem'}}>
+                      <span>Participants</span>
+                      <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'80px'}}/>
+                    </label>
+                    <div className="booking-actions">
+                      <button className="btn" disabled={busy||!crenPick} onClick={reserverAct}>{busy?'Ajout…':'Confirmer'}</button>
+                      <button className="btn-ghost" onClick={()=>setActSel(null)}>Annuler</button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Transports */}
+        <section className="detail-section">
+          <h2 className="section-title">Transports disponibles</h2>
+          {transports.length===0&&<p className="muted">Aucun transport disponible vers cette destination.</p>}
+          <div className="grid">
+            {transports.map(t=>(
+              <article key={t.id_transport} className="card tr-card">
+                <div className="card-tag-row">
+                  <span className="tag">{transportIcon(t.type)} {t.type}</span>
+                  {t.compagnie&&<span className="tag">{t.compagnie}</span>}
+                </div>
+                <h3 className="card-title">{t.ville_depart} → {destination.nom}</h3>
+                <p className="muted small">Départ : {fmtDatetime(t.date_depart)}</p>
+                <p className="muted small">Arrivée : {fmtDatetime(t.date_arrivee)}</p>
+                <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s) disponible(s)</p>
+                <button className="btn" style={{width:'100%'}} onClick={()=>{setShowTr(t.id_transport);setTrPick(t.id_transport);setNbPass(1);setMsg('');}}>Réserver ce transport</button>
+                {showTr===t.id_transport&&(
+                  <div className="booking-panel">
+                    <label className="field" style={{marginBottom:'.75rem'}}>
+                      <span>Nombre de passagers</span>
+                      <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'80px'}}/>
+                    </label>
+                    <p className="muted small" style={{marginBottom:'.75rem'}}>Total : {(Number(t.prix)*nbPass).toFixed(0)} €</p>
+                    <div className="booking-actions">
+                      <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
+                      <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  /* ─ Panier ─ */
+  function Panier({user,onLogout,nav,nbNotifs}) {
+    const [data,setData]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [busy,setBusy]         = useState(false);
+    const [error,setError]       = useState('');
+    const [showPaiement,setShowPaiement] = useState(false);
+    const defCard={titulaire:'',numero:'',expiry:'',cvv:''};
+    const [card,setCard] = useState(defCard);
+    const [modifHeb,setModifHeb] = useState(null); // {id, id_hebergement, dispos:[]}
+    const [modifDispo,setModifDispo] = useState(null);
+
+    async function reload(){ const d=await api('mon_sejour.php'); setData(d); }
+    useEffect(()=>{ reload().catch(err=>setError(err.message)).finally(()=>setLoading(false)); },[]);
+
+    async function ouvrirModif(h){
+      setError('');
+      const d=await api(`dispos.php?hebergement=${h.id_hebergement}`);
+      const dispos=d.dispos??[];
+      setModifHeb({id:h.id, id_hebergement:h.id_hebergement, dispos});
+      setModifDispo(dispos[0]?.id_dispo??null);
+    }
+    async function confirmerModif(){
+      if(!modifDispo)return; setBusy(true); setError('');
+      try{
+        await api('modifier_hebergement.php',{method:'POST',body:JSON.stringify({id:modifHeb.id,id_dispo:modifDispo})});
+        setModifHeb(null); await reload();
+      }catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+
+    async function retirer(type,id){
+      setBusy(true); setError('');
+      try{ await api(`retirer_${type}.php`,{method:'POST',body:JSON.stringify({id})}); await reload(); }
+      catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+    async function supprimerSejour(){
+      if(!confirm('Supprimer ce séjour ? Cette action est irréversible.'))return;
+      setBusy(true); setError('');
+      try{ await api('supprimer_sejour.php',{method:'POST'}); await reload(); }
+      catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+    async function valider(e){
+      e.preventDefault(); setBusy(true); setError('');
+      try{ const r=await api('valider_sejour.php',{method:'POST'}); nav('confirmation',r); }
+      catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+    const selCard=e=>setCard(c=>({...c,[e.target.name]:e.target.value}));
+
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const vide=!data?.sejour;
+
+    if(showPaiement) return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>setShowPaiement(false)}>← Retour au séjour</button>
+          <h1 className="detail-title">Paiement</h1>
+        </div>
+        <div className="card" style={{maxWidth:'480px',margin:'0 auto',padding:'2rem'}}>
+          <p className="muted" style={{marginBottom:'1.5rem'}}>Total à régler : <strong>{Number(data.total).toFixed(2)} €</strong></p>
+          <form onSubmit={valider} className="form">
+            <label className="field"><span>Nom du titulaire</span>
+              <input name="titulaire" value={card.titulaire} onChange={selCard} placeholder="Jean Dupont" required/>
+            </label>
+            <label className="field"><span>Numéro de carte</span>
+              <input name="numero" value={card.numero} onChange={selCard} placeholder="4242 4242 4242 4242" maxLength={19} required/>
+            </label>
+            <div className="form-row">
+              <label className="field"><span>Date d'expiration</span>
+                <input name="expiry" value={card.expiry} onChange={selCard} placeholder="MM/AA" maxLength={5} required/>
+              </label>
+              <label className="field"><span>CVV</span>
+                <input name="cvv" value={card.cvv} onChange={selCard} placeholder="123" maxLength={4} required/>
+              </label>
+            </div>
+            {error&&<p className="error">{error}</p>}
+            <button type="submit" className="btn" style={{width:'100%',marginTop:'.5rem'}} disabled={busy}>{busy?'Traitement…':'Confirmer le paiement →'}</button>
+            <p className="muted small" style={{marginTop:'.5rem',textAlign:'center'}}>Simulation pédagogique — aucune transaction réelle.</p>
+          </form>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mon séjour</h1>
+          {vide&&<p className="muted">Votre panier est vide. Choisissez une destination pour commencer.</p>}
+        </div>
+        {!vide&&<>
+          <p className="muted" style={{marginBottom:'1rem'}}>{data.sejour.titre}</p>
+          {data.transports?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Transports</h2>
+              {data.transports.map(t=>(
+                <div key={t.id} className="panier-item">
+                  <div><strong>{t.ville_depart} → {t.destination}</strong> <span className="tag">{transportIcon(t.type)} {t.type}</span>
+                    {t.compagnie&&<span className="muted small" style={{marginLeft:'.4rem'}}>{t.compagnie}</span>}
+                    <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s)</p>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'.75rem'}}>
+                    <span className="price-tag small">{Number(t.prix).toFixed(0)} €</span>
+                    <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('transport',t.id)}>Retirer</button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+          {data.hebergements?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Hébergements</h2>
+              {data.hebergements.map(h=>(
+                <div key={h.id}>
+                  <div className="panier-item">
+                    <div><strong>{h.nom_hebergement}</strong> <span className="tag">{h.type}</span>
+                      <p className="muted small">{fmtDate(h.date_debut)} → {fmtDate(h.date_fin)}</p>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'.5rem',flexWrap:'wrap'}}>
+                      <span className="price-tag small">{Number(h.prix).toFixed(0)} €</span>
+                      <button className="btn-ghost" style={{fontSize:'.8rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>modifHeb?.id===h.id?setModifHeb(null):ouvrirModif(h)}>Modifier</button>
+                      <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('hebergement',h.id)}>Retirer</button>
+                    </div>
+                  </div>
+                  {modifHeb?.id===h.id&&(
+                    <div className="booking-panel" style={{marginBottom:'1rem'}}>
+                      <p className="booking-label">Choisir une nouvelle période :</p>
+                      {modifHeb.dispos.length===0?<p className="muted small">Aucune autre période disponible.</p>
+                        :modifHeb.dispos.map(dp=>(
+                          <label key={dp.id_dispo} className="picker-item">
+                            <input type="radio" name="modif_dispo" checked={modifDispo===dp.id_dispo} onChange={()=>setModifDispo(dp.id_dispo)}/>
+                            <span>{fmtDate(dp.date_debut)} → {fmtDate(dp.date_fin)}</span>
+                          </label>
+                        ))}
+                      <div className="booking-actions">
+                        <button className="btn" disabled={busy||!modifDispo} onClick={confirmerModif}>{busy?'Modification…':'Confirmer'}</button>
+                        <button className="btn-ghost" onClick={()=>setModifHeb(null)}>Annuler</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
+          {data.activites?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Activités</h2>
+              {data.activites.map(a=>(
+                <div key={a.id} className="panier-item">
+                  <div><strong>{a.nom_activite}</strong> <span className="tag">{a.categorie}</span>
+                    <p className="muted small">{fmtDatetime(a.date_heure)} · {a.nb_participants} pers.</p>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'.75rem'}}>
+                    <span className="price-tag small">{Number(a.prix).toFixed(0)} €</span>
+                    <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('activite',a.id)}>Retirer</button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+          <div className="total-row"><span>Total</span><span className="price-tag">{Number(data.total).toFixed(2)} €</span></div>
+          {error&&<p className="error" style={{marginTop:'1rem'}}>{error}</p>}
+          <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem',flexWrap:'wrap'}}>
+            <button className="btn" style={{minWidth:'220px'}} disabled={busy} onClick={()=>setShowPaiement(true)}>Procéder au paiement →</button>
+            <button className="btn-ghost" style={{color:'#c0392b'}} disabled={busy} onClick={supprimerSejour}>Supprimer ce séjour</button>
+          </div>
+        </>}
+      </div>
+    );
+  }
+
+  /* ─ Confirmation ─ */
+  function Confirmation({infos,nav}){
+    return (
+      <div className="screen-center">
+        <div className="card conf-card">
+          <div className="conf-check">✓</div>
+          <h1 className="auth-title" style={{textAlign:'center'}}>Réservation confirmée !</h1>
+          <p className="muted" style={{textAlign:'center'}}>Votre séjour <strong>{infos.titre}</strong> a été validé.</p>
+          <div className="ref-block">
+            <span className="muted small">Référence</span>
+            <p style={{fontFamily:'monospace',fontSize:'1.2rem',margin:'.25rem 0 0'}}>{infos.reference}</p>
+          </div>
+          <p className="price-tag" style={{textAlign:'center',marginTop:'1rem'}}>{Number(infos.montant).toFixed(2)} €</p>
+          <p className="muted small" style={{textAlign:'center'}}>Paiement simulé — projet pédagogique.</p>
+          <button className="btn" style={{width:'100%',marginTop:'1.5rem'}} onClick={()=>nav('catalogue')}>Retour au catalogue</button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─ Profil ─ */
+  function Profil({user,onLogout,nav}){
+    const [profil,setProfil]   = useState(null);
+    const [loading,setLoading] = useState(true);
+    const [edit,setEdit]       = useState(false);
+    const [form,setForm]       = useState({nom:'',prenom:'',mot_de_passe:''});
+    const [msg,setMsg]         = useState('');
+    const [busy,setBusy]       = useState(false);
+    useEffect(()=>{
+      api('profil.php').then(d=>{ setProfil(d.user); setForm({nom:d.user.nom,prenom:d.user.prenom,mot_de_passe:''}); })
+        .finally(()=>setLoading(false));
+    },[]);
+    async function sauvegarder(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('profil.php',{method:'POST',body:JSON.stringify(form)});
+        setMsg('✓ Profil mis à jour !'); setEdit(false);
+        const d=await api('profil.php'); setProfil(d.user);
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const roleLabel={voyageur:'Voyageur',hote:'Hôte',admin:'Administrateur'};
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mon profil</h1>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        {!edit ? (
+          <div className="card" style={{maxWidth:'480px',padding:'2rem'}}>
+            <div className="profil-row"><span className="muted small">Prénom</span><strong>{profil.prenom}</strong></div>
+            <div className="profil-row"><span className="muted small">Nom</span><strong>{profil.nom}</strong></div>
+            <div className="profil-row"><span className="muted small">Email</span><strong>{profil.email}</strong></div>
+            <div className="profil-row"><span className="muted small">Rôle</span><span className="tag">{roleLabel[profil.role]||profil.role}</span></div>
+            <div className="profil-row"><span className="muted small">Statut</span><span className={`tag${profil.statut==='actif'?'':' tag-warn'}`}>{profil.statut}</span></div>
+            <div className="profil-row"><span className="muted small">Membre depuis</span><strong>{fmtDate(profil.date_inscription)}</strong></div>
+            <button className="btn" style={{marginTop:'1.5rem'}} onClick={()=>setEdit(true)}>Modifier mon profil</button>
+          </div>
+        ) : (
+          <form onSubmit={sauvegarder} className="form card" style={{maxWidth:'480px',padding:'2rem'}}>
+            <div className="form-row">
+              <label className="field"><span>Prénom</span><input value={form.prenom} onChange={e=>setForm(f=>({...f,prenom:e.target.value}))} required/></label>
+              <label className="field"><span>Nom</span><input value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} required/></label>
+            </div>
+            <label className="field"><span>Nouveau mot de passe (laisser vide pour ne pas changer)</span>
+              <input type="password" value={form.mot_de_passe} onChange={e=>setForm(f=>({...f,mot_de_passe:e.target.value}))} minLength={8} autoComplete="new-password"/>
+            </label>
+            <div className="booking-actions">
+              <button type="submit" className="btn" disabled={busy}>{busy?'Sauvegarde…':'Sauvegarder'}</button>
+              <button type="button" className="btn-ghost" onClick={()=>setEdit(false)}>Annuler</button>
+            </div>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  /* ─ Notifications ─ */
+  function Notifications({user,onLogout,nav}){
+    const [notifs,setNotifs]   = useState([]);
+    const [loading,setLoading] = useState(true);
+    useEffect(()=>{ api('notifications.php').then(d=>setNotifs(d.notifications)).finally(()=>setLoading(false)); },[]);
+    async function toutLu(){ await api('notifications.php',{method:'POST'}); setNotifs(notifs.map(n=>({...n,lu:1}))); }
+    const icons={reservation_confirmee:'✓',depart_proche:'✈',modification:'📝',activite_a_venir:'⭐',systeme:'ℹ'};
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Notifications</h1>
+        </div>
+        {!loading&&notifs.some(n=>!n.lu)&&<button className="btn-ghost" style={{marginBottom:'1rem'}} onClick={toutLu}>Tout marquer comme lu</button>}
+        {loading&&<p className="muted">Chargement…</p>}
+        {!loading&&notifs.length===0&&<p className="muted">Aucune notification.</p>}
+        {notifs.map(n=>(
+          <div key={n.id_notification} className={`notif-item${n.lu==1?' lu':''}`}>
+            <span className="notif-icon">{icons[n.type]||'ℹ'}</span>
+            <div><strong>{n.titre}</strong><p className="muted small">{n.message}</p><p className="muted small">{fmtDatetime(n.date_creation)}</p></div>
+            {n.lu==0&&<span className="notif-dot"></span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* ─ Espace hôte ─ */
+  function HoteDashboard({user,onLogout,nav}){
+    const [data,setData]         = useState(null);
+    const [destinations,setDests] = useState([]);
+    const [loading,setLoading]   = useState(true);
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+    const [showHebForm,setShowHebForm] = useState(false);
+    const [showActForm,setShowActForm] = useState(false);
+    const [showDispoFor,setShowDispoFor] = useState(null);
+    const defHeb={nom:'',type:'appartement',capacite:2,prix_semaine:500,duree_min_nuits:7,id_destination:''};
+    const defAct={nom:'',description:'',categorie:'aventure',prix_personne:50,duree_h:2,niveau:'facile',id_destination:'',date_heure:'',places_totales:8};
+    const defDispo={date_debut:'',date_fin:''};
+    const [formHeb,setFormHeb]   = useState(defHeb);
+    const [formAct,setFormAct]   = useState(defAct);
+    const [formDispo,setFormDispo] = useState(defDispo);
+    async function reload(){
+      const [d,dests]=await Promise.all([api('hote_dashboard.php'),api('destinations.php')]);
+      setData(d); setDests(dests.destinations);
+      const id=String(dests.destinations[0]?.id_destination??'');
+      setFormHeb(f=>({...f,id_destination:id})); setFormAct(f=>({...f,id_destination:id}));
+    }
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    async function submitHeb(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_hebergement.php',{method:'POST',body:JSON.stringify({...formHeb,capacite:parseInt(formHeb.capacite),prix_semaine:parseFloat(formHeb.prix_semaine),duree_min_nuits:parseInt(formHeb.duree_min_nuits),id_destination:parseInt(formHeb.id_destination)})});
+        setMsg('✓ Hébergement publié !'); setShowHebForm(false); setFormHeb(defHeb); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitAct(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_activite.php',{method:'POST',body:JSON.stringify({...formAct,prix_personne:parseFloat(formAct.prix_personne),duree_h:parseFloat(formAct.duree_h),places_totales:parseInt(formAct.places_totales),id_destination:parseInt(formAct.id_destination)})});
+        setMsg('✓ Activité publiée !'); setShowActForm(false); setFormAct(defAct); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitDispo(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_dispo.php',{method:'POST',body:JSON.stringify({id_hebergement:showDispoFor,...formDispo})});
+        setMsg('✓ Disponibilité ajoutée !'); setShowDispoFor(null); setFormDispo(defDispo); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    const sel=setter=>e=>setter(f=>({...f,[e.target.name]:e.target.value}));
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <div className="detail-header">
+          <h1 className="detail-title">Espace hôte</h1>
+          <p className="muted">Gérez vos hébergements et vos expériences locales.</p>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Mes hébergements</h2>
+            <button className="btn" onClick={()=>{setShowHebForm(!showHebForm);setShowActForm(false);}}>{showHebForm?'Annuler':'+ Ajouter'}</button>
+          </div>
+          {showHebForm&&(
+            <form onSubmit={submitHeb} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={formHeb.nom} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Type</span><select name="type" value={formHeb.type} onChange={sel(setFormHeb)}>{['appartement','maison','villa','chambre','autre'].map(t=><option key={t}>{t}</option>)}</select></label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Capacité</span><input type="number" name="capacite" min="1" value={formHeb.capacite} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Prix/sem (€)</span><input type="number" name="prix_semaine" min="1" step="0.01" value={formHeb.prix_semaine} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Durée min (nuits)</span><input type="number" name="duree_min_nuits" min="1" value={formHeb.duree_min_nuits} onChange={sel(setFormHeb)} required/></label>
+              </div>
+              <label className="field"><span>Destination</span><select name="id_destination" value={formHeb.id_destination} onChange={sel(setFormHeb)}>{destinations.map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}</select></label>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier'}</button>
+            </form>
+          )}
+          {(data?.hebergements??[]).length===0&&!showHebForm&&<p className="muted">Aucun hébergement publié.</p>}
+          {(data?.hebergements??[]).map(h=>(
+            <div key={h.id_hebergement} className="dash-item">
+              <div><strong>{h.nom}</strong> <span className="tag">{h.type}</span> <span className="tag">{h.destination}</span>
+                <p className="muted small">{h.capacite} pers. · {h.prix_semaine} €/sem · {h.nb_dispos} dispo(s)</p>
+              </div>
+              <div style={{display:'flex',gap:'.5rem'}}>
+                <button className="btn-ghost" onClick={()=>{setShowDispoFor(h.id_hebergement);setMsg('');}}>+ Dispo</button>
+                <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
+                  if(!confirm('Supprimer cet hébergement ?'))return;
+                  setBusy(true);setMsg('');
+                  try{await api('hote_supprimer_hebergement.php',{method:'POST',body:JSON.stringify({id:h.id_hebergement})});await reload();}
+                  catch(err){setMsg(err.message);}finally{setBusy(false);}
+                }}>Supprimer</button>
+              </div>
+            </div>
+          ))}
+          {showDispoFor&&(
+            <form onSubmit={submitDispo} className="dash-form" style={{marginTop:'.5rem'}}>
+              <p className="booking-label">Nouvelle disponibilité</p>
+              <div className="form-row">
+                <label className="field"><span>Date début</span><input type="date" name="date_debut" value={formDispo.date_debut} onChange={sel(setFormDispo)} required/></label>
+                <label className="field"><span>Date fin</span><input type="date" name="date_fin" value={formDispo.date_fin} onChange={sel(setFormDispo)} required/></label>
+              </div>
+              <div className="booking-actions">
+                <button type="submit" className="btn" disabled={busy}>{busy?'…':'Ajouter'}</button>
+                <button type="button" className="btn-ghost" onClick={()=>setShowDispoFor(null)}>Annuler</button>
+              </div>
+            </form>
+          )}
+        </section>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Mes activités</h2>
+            <button className="btn" onClick={()=>{setShowActForm(!showActForm);setShowHebForm(false);}}>{showActForm?'Annuler':'+ Ajouter'}</button>
+          </div>
+          {showActForm&&(
+            <form onSubmit={submitAct} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={formAct.nom} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Catégorie</span><select name="categorie" value={formAct.categorie} onChange={sel(setFormAct)}>{['aventure','culture','nature','gastronomie','bien_etre'].map(c=><option key={c}>{c}</option>)}</select></label>
+                <label className="field"><span>Niveau</span><select name="niveau" value={formAct.niveau} onChange={sel(setFormAct)}>{['facile','moyen','difficile'].map(n=><option key={n}>{n}</option>)}</select></label>
+              </div>
+              <label className="field"><span>Description</span><input name="description" value={formAct.description} onChange={sel(setFormAct)}/></label>
+              <div className="form-row">
+                <label className="field"><span>Prix/pers (€)</span><input type="number" name="prix_personne" min="1" step="0.01" value={formAct.prix_personne} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Durée (h)</span><input type="number" name="duree_h" min=".5" step=".5" value={formAct.duree_h} onChange={sel(setFormAct)}/></label>
+                <label className="field"><span>Places</span><input type="number" name="places_totales" min="1" value={formAct.places_totales} onChange={sel(setFormAct)} required/></label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Premier créneau</span><input type="datetime-local" name="date_heure" value={formAct.date_heure} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Destination</span><select name="id_destination" value={formAct.id_destination} onChange={sel(setFormAct)}>{destinations.map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}</select></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier'}</button>
+            </form>
+          )}
+          {(data?.activites??[]).length===0&&!showActForm&&<p className="muted">Aucune activité publiée.</p>}
+          {(data?.activites??[]).map(a=>(
+            <div key={a.id_activite} className="dash-item">
+              <div><strong>{a.nom}</strong> <span className="tag">{a.categorie}</span> <span className="tag">{a.destination}</span>
+                <p className="muted small">{a.prix_personne} €/pers. · {a.nb_creneaux} créneau(x) dispo.</p>
+              </div>
+              <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
+                if(!confirm('Supprimer cette activité ?'))return;
+                setBusy(true);setMsg('');
+                try{await api('hote_supprimer_activite.php',{method:'POST',body:JSON.stringify({id:a.id_activite})});await reload();}
+                catch(err){setMsg(err.message);}finally{setBusy(false);}
+              }}>Supprimer</button>
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  /* ─ Espace admin ─ */
+  function AdminDashboard({user,onLogout,nav}){
+    const [data,setData]     = useState(null);
+    const [loading,setLoading] = useState(true);
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+    const [showForm,setShowForm]   = useState(false);
+    const [showTrForm,setShowTrForm] = useState(false);
+    const defDest={nom:'',pays:'',region:'',description:'',latitude:'',longitude:''};
+    const defTr={id_destination:'',ville_depart:'',type:'avion',compagnie:'',date_depart:'',date_arrivee:'',prix:'',places_dispo:''};
+    const [form,setForm]   = useState(defDest);
+    const [formTr,setFormTr] = useState(defTr);
+    async function reload(){ const d=await api('admin_dashboard.php'); setData(d); }
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    async function submitDest(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('admin_creer_destination.php',{method:'POST',body:JSON.stringify({...form,latitude:form.latitude?parseFloat(form.latitude):null,longitude:form.longitude?parseFloat(form.longitude):null})});
+        setMsg('✓ Destination publiée !'); setShowForm(false); setForm(defDest); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitTr(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('admin_creer_transport.php',{method:'POST',body:JSON.stringify({...formTr,id_destination:parseInt(formTr.id_destination),prix:parseFloat(formTr.prix),places_dispo:parseInt(formTr.places_dispo)})});
+        setMsg('✓ Transport créé !'); setShowTrForm(false); setFormTr(defTr); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    const sel  = e=>setForm(f=>({...f,[e.target.name]:e.target.value}));
+    const selTr= e=>setFormTr(f=>({...f,[e.target.name]:e.target.value}));
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const s=data?.stats??{};
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav}/>
+        <div className="detail-header">
+          <h1 className="detail-title">Espace admin</h1>
+          <p className="muted">Gérez les destinations et modérez les contenus.</p>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        <div className="stats-row">
+          {[['Utilisateurs',s.nb_utilisateurs],['Voyageurs',s.nb_voyageurs],['Hôtes',s.nb_hotes],['Destinations',s.nb_destinations],['Hébergements',s.nb_hebergements],['Séjours validés',s.nb_sejours_valides]].map(([l,v])=>(
+            <div key={l} className="stat-card"><span className="stat-val">{v}</span><span className="muted small">{l}</span></div>
+          ))}
+        </div>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Destinations</h2>
+            <button className="btn" onClick={()=>setShowForm(!showForm)}>{showForm?'Annuler':'+ Nouvelle destination'}</button>
+          </div>
+          {showForm&&(
+            <form onSubmit={submitDest} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={form.nom} onChange={sel} required/></label>
+                <label className="field"><span>Pays</span><input name="pays" value={form.pays} onChange={sel} required/></label>
+                <label className="field"><span>Région</span><input name="region" value={form.region} onChange={sel}/></label>
+              </div>
+              <label className="field"><span>Description</span><input name="description" value={form.description} onChange={sel}/></label>
+              <div className="form-row">
+                <label className="field"><span>Latitude</span><input type="number" name="latitude" step=".000001" value={form.latitude} onChange={sel}/></label>
+                <label className="field"><span>Longitude</span><input type="number" name="longitude" step=".000001" value={form.longitude} onChange={sel}/></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier la destination'}</button>
+            </form>
+          )}
+          {(data?.destinations??[]).map(d=>(
+            <div key={d.id_destination} className="dash-item">
+              <div><strong>{d.nom}</strong> <span className="tag">{d.pays}</span>
+                {d.region&&<span className="muted small" style={{marginLeft:'.5rem'}}>{d.region}</span>}
+                <p className="muted small">{d.nb_hebergements} hébergement(s)</p>
+              </div>
+              <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
+                if(!confirm(`Supprimer la destination "${d.nom}" ?`))return;
+                setBusy(true);setMsg('');
+                try{await api('admin_supprimer_destination.php',{method:'POST',body:JSON.stringify({id:d.id_destination})});await reload();}
+                catch(err){setMsg(err.message);}finally{setBusy(false);}
+              }}>Supprimer</button>
+            </div>
+          ))}
+        </section>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Transports</h2>
+            <button className="btn" onClick={()=>setShowTrForm(!showTrForm)}>{showTrForm?'Annuler':'+ Nouveau transport'}</button>
+          </div>
+          {showTrForm&&(
+            <form onSubmit={submitTr} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Destination</span>
+                  <select name="id_destination" value={formTr.id_destination} onChange={selTr} required>
+                    <option value="">— choisir —</option>
+                    {(data?.destinations??[]).map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}
+                  </select>
+                </label>
+                <label className="field"><span>Ville de départ</span><input name="ville_depart" value={formTr.ville_depart} onChange={selTr} required/></label>
+                <label className="field"><span>Type</span>
+                  <select name="type" value={formTr.type} onChange={selTr}>{['avion','train','bus','ferry'].map(t=><option key={t}>{t}</option>)}</select>
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Compagnie</span><input name="compagnie" value={formTr.compagnie} onChange={selTr}/></label>
+                <label className="field"><span>Prix (€)</span><input type="number" name="prix" min="0" step="0.01" value={formTr.prix} onChange={selTr} required/></label>
+                <label className="field"><span>Places</span><input type="number" name="places_dispo" min="1" value={formTr.places_dispo} onChange={selTr} required/></label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Date de départ</span><input type="datetime-local" name="date_depart" value={formTr.date_depart} onChange={selTr} required/></label>
+                <label className="field"><span>Date d'arrivée</span><input type="datetime-local" name="date_arrivee" value={formTr.date_arrivee} onChange={selTr} required/></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Création…':'Créer le transport'}</button>
+            </form>
+          )}
+        </section>
+        <section className="detail-section">
+          <h2 className="section-title">Séjours et voyageurs associés</h2>
+          {(data?.sejours??[]).map(s=>(
+            <div key={s.id_sejour} className="dash-item">
+              <div>
+                <strong>{s.titre}</strong>
+                <span className="tag" style={{marginLeft:'.5rem'}}>{s.statut}</span>
+                <p className="muted small">Voyageur : {s.voyageur_prenom} {s.voyageur_nom} — {s.voyageur_email}</p>
+                {s.date_debut&&<p className="muted small">{fmtDate(s.date_debut)} → {fmtDate(s.date_fin)} · {Number(s.prix_total).toFixed(2)} €</p>}
+              </div>
+              {s.statut==='brouillon'&&(
+                <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
+                  if(!confirm(`Supprimer le séjour "${s.titre}" ?`))return;
+                  setBusy(true);setMsg('');
+                  try{
+                    await api('supprimer_sejour.php',{method:'POST'});
+                    await reload();
+                  }catch(err){setMsg(err.message);}finally{setBusy(false);}
+                }}>Supprimer</button>
+              )}
+            </div>
+          ))}
+        </section>
+        <section className="detail-section">
+          <h2 className="section-title">Gestion des utilisateurs</h2>
+          {(data?.utilisateurs??[]).map(u=>(
+            <div key={u.id_utilisateur} className="dash-item">
+              <div>
+                <strong>{u.prenom} {u.nom}</strong>
+                <span className="tag" style={{marginLeft:'.5rem'}}>{u.role}</span>
+                {u.statut==='suspendu'&&<span className="tag tag-warn" style={{marginLeft:'.4rem'}}>suspendu</span>}
+                <p className="muted small">{u.email}</p>
+              </div>
+              <div style={{display:'flex',gap:'.4rem',flexWrap:'wrap'}}>
+                {u.role!=='admin'    && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'promote_admin'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Admin</button>}
+                {u.role!=='hote'     && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'promote_hote'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Hôte</button>}
+                {u.role!=='voyageur' && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'demote'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Voyageur</button>}
+                {u.statut==='actif'
+                  ? <button className="btn-danger-sm" disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'suspend'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>Suspendre</button>
+                  : <button className="btn-ghost"    disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'activer'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>Réactiver</button>
+                }
+              </div>
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  /* ─ Application ─ */
+  function App(){
+    const [user,setUser]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [vue,setVue]           = useState('catalogue');
+    const [vueData,setVueData]   = useState(null);
+    const [nbNotifs,setNbNotifs] = useState(0);
+    useEffect(()=>{ api('me.php').then(d=>setUser(d.user)).catch(()=>setUser(null)).finally(()=>setLoading(false)); },[]);
+    useEffect(()=>{
+      if(!user)return;
+      api('notifications.php').then(d=>setNbNotifs(d.nb_non_lues)).catch(()=>{});
+    },[user,vue]);
+    async function login(email,mot_de_passe){
+      const d=await api('login.php',{method:'POST',body:JSON.stringify({email,mot_de_passe})});
+      setUser(d.user);
+    }
+    async function logout(){
+      await api('logout.php',{method:'POST'});
+      setUser(null); setVue('catalogue'); setVueData(null);
+    }
+    function nav(v,data=null){ setVue(v); setVueData(data); }
+
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    if(!user)  return <Login onLogin={login}/>;
+
+    const common={user,onLogout:logout,nav,nbNotifs};
+    if(vue==='confirmation'&&vueData) return <Confirmation infos={vueData} nav={nav}/>;
+    if(vue==='panier')                return <Panier {...common}/>;
+    if(vue==='notifications')         return <Notifications {...common}/>;
+    if(vue==='profil')                return <Profil {...common}/>;
+    if(vue==='hote')                  return <HoteDashboard {...common}/>;
+    if(vue==='admin')                 return <AdminDashboard {...common}/>;
+    if(vue==='destination'&&vueData)  return <DestinationDetail {...common} destination={vueData}/>;
+    return <Catalogue {...common}/>;
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
