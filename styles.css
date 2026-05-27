@@ -111,18 +111,35 @@ html,body{height:100%;}
 .why-icon{font-size:2rem;margin-bottom:.75rem;}
 .why-card h3{font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:1.05rem;margin:0 0 .5rem;}
 
-/* ── Détail destination ── */
-.detail-header{padding:2rem 0 1.5rem;border-bottom:1px solid var(--line);margin-bottom:2rem;}
-.detail-hero{display:flex;gap:1.5rem;align-items:flex-start;margin-top:.5rem;}
-.dest-emoji-lg{font-size:4rem;flex-shrink:0;}
-.detail-title{font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:clamp(2rem,5vw,2.8rem);line-height:1.05;letter-spacing:-.02em;margin:.5rem 0 .75rem;}
+/* ── Banner destination ── */
+.dest-banner{position:relative;height:380px;overflow:hidden;background:var(--forest-deep);}
+.dest-banner-img{width:100%;height:100%;object-fit:cover;display:block;}
+.dest-banner-placeholder{width:100%;height:100%;background:linear-gradient(135deg,var(--forest-deep),var(--forest));}
+.dest-banner-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,18,14,.8) 0%,rgba(20,18,14,.25) 45%,rgba(20,18,14,.5) 100%);}
+.dest-banner-topbar{position:absolute;top:0;left:0;right:0;z-index:2;}
+.dest-banner-topbar .topbar{max-width:1040px;margin:0 auto;}
+.dest-banner-content{position:absolute;bottom:0;left:0;right:0;padding:1.5rem 2rem;display:flex;align-items:flex-end;justify-content:space-between;z-index:1;}
+.dest-banner-pays{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7);display:block;margin-bottom:.3rem;}
+.dest-banner-title{font-size:clamp(2rem,5vw,3rem);font-weight:700;color:#fff;margin:0;line-height:1.05;letter-spacing:-.02em;}
+.btn-back-banner{font:inherit;cursor:pointer;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);color:#fff;padding:.5rem 1rem;border-radius:8px;font-size:.85rem;white-space:nowrap;align-self:flex-start;}
+.btn-back-banner:hover{background:rgba(255,255,255,.25);}
+.dest-desc-full{margin:1.5rem 0 2rem;font-size:1rem;line-height:1.7;max-width:680px;}
+.sens-row{display:flex;gap:.75rem;margin-bottom:.75rem;}
+.sens-option{display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.9rem;padding:.4rem .75rem;border-radius:8px;border:1px solid var(--line);background:#fff;flex:1;justify-content:center;}
+.sens-option:has(input:checked){background:var(--forest);color:#fff;border-color:var(--forest);}
+.sens-option input{display:none;}
 .detail-section{margin-bottom:3rem;}
-.section-title{font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:1.5rem;margin:0 0 1.25rem;padding-bottom:.5rem;border-bottom:1px solid var(--line);}
+.section-title{font-weight:600;font-size:1.4rem;margin:0 0 1.25rem;padding-bottom:.5rem;border-bottom:1px solid var(--line);}
 .section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-@media(max-width:560px){.detail-hero{flex-direction:column;gap:.75rem;}.dest-emoji-lg{font-size:3rem;}}
+@media(max-width:600px){.dest-banner{height:220px;}.dest-banner-title{font-size:1.6rem;}}
 
 /* ── Cartes hébergement / activité ── */
-.heb-card,.act-card{padding:1.5rem;}
+.heb-card,.act-card{padding:0;overflow:hidden;}
+.heb-card-img{height:180px;position:relative;overflow:hidden;background:#e7ddcd;}
+.heb-card-photo{width:100%;height:100%;object-fit:cover;transition:transform .4s ease;display:block;}
+.heb-card:hover .heb-card-photo,.act-card:hover .heb-card-photo{transform:scale(1.05);}
+.heb-card-badges{position:absolute;bottom:0;left:0;right:0;padding:.5rem .75rem;background:linear-gradient(to top,rgba(20,18,14,.6),transparent);display:flex;justify-content:space-between;align-items:flex-end;}
+.heb-card-body{padding:1.1rem 1.25rem 1.25rem;}
 .card-tag-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;}
 .card-title{font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:1.2rem;margin:0 0 .5rem;}
 .price-tag{font-size:1.4rem;font-weight:700;margin:.25rem 0;}

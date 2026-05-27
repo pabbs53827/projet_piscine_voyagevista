@@ -23,8 +23,7 @@ if ($idSejour <= 0 || $idHeb <= 0 || !$dateDebut || !$dateFin) {
 $dDebut = DateTimeImmutable::createFromFormat('Y-m-d', $dateDebut);
 $dFin   = DateTimeImmutable::createFromFormat('Y-m-d', $dateFin);
 if (!$dDebut || !$dFin) json_error('Format de date invalide.');
-if ($dFin <= $dDebut)   json_error('La date de fin doit être après la date de début.');
-if ($dDebut < new DateTimeImmutable('today')) json_error('La date de début ne peut pas être dans le passé.');
+if ($dFin <= $dDebut) json_error('La date de fin doit être après la date de début.');
 
 $pdo = db();
 

@@ -71,8 +71,8 @@
   function Login({onLogin}) {
     const [mode, setMode] = useState('login');
     // login
-    const [email, setEmail]   = useState('lucas@example.com');
-    const [mdp, setMdp]       = useState('password');
+    const [email, setEmail]   = useState('');
+    const [mdp, setMdp]       = useState('');
     // register
     const [rEmail, setREmail]   = useState('');
     const [rMdp, setRMdp]       = useState('');
@@ -252,7 +252,8 @@
     // transport
     const [trPick,setTrPick]     = useState(null);
     const [nbPass,setNbPass]     = useState(1);
-    const [showTr,setShowTr]     = useState(false);
+    const [showTr,setShowTr]     = useState(null);
+    const [sensTr,setSensTr]     = useState('aller');
     const [msg,setMsg]   = useState('');
     const [busy,setBusy] = useState(false);
 
@@ -300,7 +301,7 @@
     async function reserverTransport(){
       if(!trPick)return; setBusy(true); setMsg('');
       try{
-        await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass})});
+        await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass,sens:sensTr})});
         setMsg('✓ Transport ajouté à votre séjour !'); setShowTr(false);
         // rafraîchir les transports
         const d=await api(`transports.php?destination=${destination.id_destination}`);
@@ -314,139 +315,161 @@
     const transports   = data?.transports??[];
 
     return (
-      <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs}/>
-        <div className="detail-header">
-          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour aux destinations</button>
-          <div className="detail-hero">
-            <span className="dest-emoji-lg">{destEmoji(destination.pays,destination.region)}</span>
-            <div>
-              <span className="tag">{destination.pays}</span>
-              {destination.region&&<span className="muted small" style={{marginLeft:'.5rem'}}>{destination.region}</span>}
-              <h1 className="detail-title">{destination.nom}</h1>
-              <p className="muted">{destination.description}</p>
+      <div>
+        {/* Banner photo */}
+        <div className="dest-banner">
+          {destination.image_url
+            ? <img src={destination.image_url} alt={destination.nom} className="dest-banner-img"/>
+            : <div className="dest-banner-placeholder"/>}
+          <div className="dest-banner-overlay">
+            <div className="dest-banner-topbar">
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} variant="dark"/>
+            </div>
+            <div className="dest-banner-content">
+              <button className="btn-back-banner" onClick={()=>nav('catalogue')}>← Retour</button>
+              <div>
+                <span className="dest-banner-pays">{destination.pays}{destination.region&&` · ${destination.region}`}</span>
+                <h1 className="dest-banner-title">{destination.nom}</h1>
+              </div>
             </div>
           </div>
         </div>
-        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
 
-        {/* Hébergements */}
-        <section className="detail-section">
-          <h2 className="section-title">Hébergements</h2>
-          <div className="filter-bar" style={{marginBottom:'1rem'}}>
-            <label className="filter-item"><span>Prix max (€/sem)</span>
-              <input type="number" min="0" placeholder="Illimité" value={prixMax} onChange={e=>setPrixMax(e.target.value)} style={{width:'110px'}}/>
-            </label>
-            <label className="filter-item"><span>Capacité min</span>
-              <input type="number" min="1" placeholder="Toutes" value={capaMin} onChange={e=>setCapaMin(e.target.value)} style={{width:'80px'}}/>
-            </label>
-          </div>
-          {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).length===0&&<p className="muted">Aucun hébergement ne correspond aux filtres.</p>}
-          <div className="grid">
-            {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).map(h=>(
-              <article key={h.id_hebergement} className="card heb-card">
-                <div className="card-tag-row"><span className="tag">{h.type}</span><span className="tag">👥 {h.capacite} pers.</span></div>
-                <h3 className="card-title">{h.nom}</h3>
-                <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
-                <button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>
-                {hebSel?.id_hebergement===h.id_hebergement&&(
-                  <div className="booking-panel">
-                    <p className="booking-label">Choisissez vos dates</p>
-                    <div className="date-picker-row">
-                      <label className="field" style={{flex:1}}>
-                        <span>Arrivée</span>
-                        <input type="date" value={dateDebut} min={new Date().toISOString().split('T')[0]}
-                          onChange={e=>{setDateDebut(e.target.value); if(dateFin&&e.target.value>=dateFin){const d=new Date(e.target.value);d.setDate(d.getDate()+7);setDateFin(d.toISOString().split('T')[0]);}}}/>
-                      </label>
-                      <label className="field" style={{flex:1}}>
-                        <span>Départ</span>
-                        <input type="date" value={dateFin} min={dateDebut||new Date().toISOString().split('T')[0]}
-                          onChange={e=>setDateFin(e.target.value)}/>
-                      </label>
-                    </div>
-                    {previewPrix(h)&&<p className="prix-preview">Total estimé : <strong>{previewPrix(h).toFixed(0)} €</strong> <span className="muted small">({Math.max(1,Math.ceil(Math.round((new Date(dateFin)-new Date(dateDebut))/86400000)/7))} sem.)</span></p>}
-                    <div className="booking-actions">
-                      <button className="btn" disabled={busy||!dateDebut||!dateFin} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
-                      <button className="btn-ghost" onClick={()=>setHebSel(null)}>Annuler</button>
-                    </div>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
+        <div className="page">
+          <p className="dest-desc-full muted">{destination.description}</p>
+          {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{margin:'0 0 1rem'}}>{msg}</p>}
 
-        {/* Activités */}
-        <section className="detail-section">
-          <h2 className="section-title">Expériences locales</h2>
-          {activites.length===0&&<p className="muted">Aucune activité proposée.</p>}
-          <div className="grid">
-            {activites.map(a=>(
-              <article key={a.id_activite} className="card act-card">
-                <div className="card-tag-row"><span className="tag">{a.categorie}</span><span className="tag">{a.niveau}</span></div>
-                <h3 className="card-title">{a.nom}</h3>
-                <p className="price-tag">{Number(a.prix_personne).toFixed(0)} € <span className="muted small">/ pers.</span></p>
-                {a.duree_h&&<p className="muted small">Durée : {a.duree_h}h</p>}
-                {a.prochain_creneau?<p className="dispo-ok">✓ {fmtDatetime(a.prochain_creneau)}</p>:<p className="dispo-none">Complet</p>}
-                {a.prochain_creneau&&<button className="btn" style={{marginTop:'1rem',width:'100%'}} onClick={()=>ouvrirAct(a)}>Ajouter</button>}
-                {actSel?.act.id_activite===a.id_activite&&(
-                  <div className="booking-panel">
-                    <p className="booking-label">Choisissez un créneau :</p>
-                    {actSel.creneaux.map(cr=>(
-                      <label key={cr.id_creneau} className="picker-item">
-                        <input type="radio" name="creneau" checked={crenPick===cr.id_creneau} onChange={()=>setCrenPick(cr.id_creneau)}/>
-                        <span>{fmtDatetime(cr.date_heure)} — {cr.places_restantes} place(s)</span>
+          {/* Transports */}
+          <section className="detail-section">
+            <h2 className="section-title">Transports disponibles</h2>
+            {transports.length===0&&<p className="muted">Aucun transport disponible vers cette destination.</p>}
+            <div className="grid">
+              {transports.map(t=>(
+                <article key={t.id_transport} className="card tr-card">
+                  <div className="card-tag-row">
+                    <span className="tag">{transportIcon(t.type)} {t.type}</span>
+                    {t.compagnie&&<span className="tag">{t.compagnie}</span>}
+                  </div>
+                  <h3 className="card-title">{t.ville_depart} → {destination.nom}</h3>
+                  <p className="muted small">Départ : {fmtDatetime(t.date_depart)}</p>
+                  <p className="muted small">Arrivée : {fmtDatetime(t.date_arrivee)}</p>
+                  <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                  <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s)</p>
+                  <button className="btn" style={{width:'100%'}} onClick={()=>{setShowTr(t.id_transport);setTrPick(t.id_transport);setNbPass(1);setSensTr('aller');setMsg('');}}>Réserver</button>
+                  {showTr===t.id_transport&&(
+                    <div className="booking-panel">
+                      <div className="sens-row">
+                        <label className="sens-option">
+                          <input type="radio" name={`sens-${t.id_transport}`} value="aller" checked={sensTr==='aller'} onChange={()=>setSensTr('aller')}/>
+                          <span>✈ Aller</span>
+                        </label>
+                        <label className="sens-option">
+                          <input type="radio" name={`sens-${t.id_transport}`} value="retour" checked={sensTr==='retour'} onChange={()=>setSensTr('retour')}/>
+                          <span>✈ Retour</span>
+                        </label>
+                      </div>
+                      <label className="field" style={{marginBottom:'.75rem'}}>
+                        <span>Passagers</span>
+                        <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'80px'}}/>
                       </label>
-                    ))}
-                    <label className="field" style={{marginTop:'.5rem'}}>
-                      <span>Participants</span>
-                      <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'80px'}}/>
-                    </label>
-                    <div className="booking-actions">
-                      <button className="btn" disabled={busy||!crenPick} onClick={reserverAct}>{busy?'Ajout…':'Confirmer'}</button>
-                      <button className="btn-ghost" onClick={()=>setActSel(null)}>Annuler</button>
+                      <p className="muted small" style={{marginBottom:'.75rem'}}>Total : <strong>{(Number(t.prix)*nbPass).toFixed(0)} €</strong></p>
+                      <div className="booking-actions">
+                        <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
+                        <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
 
-        {/* Transports */}
-        <section className="detail-section">
-          <h2 className="section-title">Transports disponibles</h2>
-          {transports.length===0&&<p className="muted">Aucun transport disponible vers cette destination.</p>}
-          <div className="grid">
-            {transports.map(t=>(
-              <article key={t.id_transport} className="card tr-card">
-                <div className="card-tag-row">
-                  <span className="tag">{transportIcon(t.type)} {t.type}</span>
-                  {t.compagnie&&<span className="tag">{t.compagnie}</span>}
-                </div>
-                <h3 className="card-title">{t.ville_depart} → {destination.nom}</h3>
-                <p className="muted small">Départ : {fmtDatetime(t.date_depart)}</p>
-                <p className="muted small">Arrivée : {fmtDatetime(t.date_arrivee)}</p>
-                <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
-                <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s) disponible(s)</p>
-                <button className="btn" style={{width:'100%'}} onClick={()=>{setShowTr(t.id_transport);setTrPick(t.id_transport);setNbPass(1);setMsg('');}}>Réserver ce transport</button>
-                {showTr===t.id_transport&&(
-                  <div className="booking-panel">
-                    <label className="field" style={{marginBottom:'.75rem'}}>
-                      <span>Nombre de passagers</span>
-                      <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'80px'}}/>
-                    </label>
-                    <p className="muted small" style={{marginBottom:'.75rem'}}>Total : {(Number(t.prix)*nbPass).toFixed(0)} €</p>
-                    <div className="booking-actions">
-                      <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
-                      <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
-                    </div>
+          {/* Hébergements */}
+          <section className="detail-section">
+            <h2 className="section-title">Hébergements</h2>
+            <div className="filter-bar" style={{marginBottom:'1rem'}}>
+              <label className="filter-item"><span>Prix max (€/sem)</span>
+                <input type="number" min="0" placeholder="Illimité" value={prixMax} onChange={e=>setPrixMax(e.target.value)} style={{width:'110px'}}/>
+              </label>
+              <label className="filter-item"><span>Capacité min</span>
+                <input type="number" min="1" placeholder="Toutes" value={capaMin} onChange={e=>setCapaMin(e.target.value)} style={{width:'80px'}}/>
+              </label>
+            </div>
+            {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).length===0&&<p className="muted">Aucun hébergement ne correspond aux filtres.</p>}
+            <div className="grid">
+              {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).map(h=>(
+                <article key={h.id_hebergement} className="card heb-card">
+                  {h.image_url&&<div className="heb-card-img"><img src={h.image_url} alt={h.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{h.type}</span><span className="dest-count">👥 {h.capacite}</span></div></div>}
+                  <div className="heb-card-body">
+                    <h3 className="card-title">{h.nom}</h3>
+                    <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
+                    <button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>
+                    {hebSel?.id_hebergement===h.id_hebergement&&(
+                      <div className="booking-panel">
+                        <p className="booking-label">Choisissez vos dates</p>
+                        <div className="date-picker-row">
+                          <label className="field" style={{flex:1}}>
+                            <span>Arrivée</span>
+                            <input type="date" value={dateDebut} min={new Date().toISOString().split('T')[0]}
+                              onChange={e=>{setDateDebut(e.target.value); if(dateFin&&e.target.value>=dateFin){const d=new Date(e.target.value);d.setDate(d.getDate()+7);setDateFin(d.toISOString().split('T')[0]);}}}/>
+                          </label>
+                          <label className="field" style={{flex:1}}>
+                            <span>Départ</span>
+                            <input type="date" value={dateFin} min={dateDebut||new Date().toISOString().split('T')[0]}
+                              onChange={e=>setDateFin(e.target.value)}/>
+                          </label>
+                        </div>
+                        {previewPrix(h)&&<p className="prix-preview">Total estimé : <strong>{previewPrix(h).toFixed(0)} €</strong> <span className="muted small">({Math.max(1,Math.ceil(Math.round((new Date(dateFin)-new Date(dateDebut))/86400000)/7))} sem.)</span></p>}
+                        <div className="booking-actions">
+                          <button className="btn" disabled={busy||!dateDebut||!dateFin} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
+                          <button className="btn-ghost" onClick={()=>setHebSel(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* Activités */}
+          <section className="detail-section">
+            <h2 className="section-title">Expériences locales</h2>
+            {activites.length===0&&<p className="muted">Aucune activité proposée.</p>}
+            <div className="grid">
+              {activites.map(a=>(
+                <article key={a.id_activite} className="card act-card">
+                  {a.image_url&&<div className="heb-card-img"><img src={a.image_url} alt={a.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{a.categorie}</span><span className="dest-count">{a.duree_h}h</span></div></div>}
+                  <div className="heb-card-body">
+                    <h3 className="card-title">{a.nom}</h3>
+                    <p className="price-tag">{Number(a.prix_personne).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                    {a.prochain_creneau?<p className="dispo-ok">✓ Prochain : {fmtDatetime(a.prochain_creneau)}</p>:<p className="dispo-none">Complet</p>}
+                    {a.prochain_creneau&&<button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirAct(a)}>Ajouter</button>}
+                    {actSel?.act.id_activite===a.id_activite&&(
+                      <div className="booking-panel">
+                        <p className="booking-label">Choisissez un créneau :</p>
+                        {actSel.creneaux.map(cr=>(
+                          <label key={cr.id_creneau} className="picker-item">
+                            <input type="radio" name="creneau" checked={crenPick===cr.id_creneau} onChange={()=>setCrenPick(cr.id_creneau)}/>
+                            <span>{fmtDatetime(cr.date_heure)} — {cr.places_restantes} place(s)</span>
+                          </label>
+                        ))}
+                        <label className="field" style={{marginTop:'.5rem'}}>
+                          <span>Participants</span>
+                          <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'80px'}}/>
+                        </label>
+                        <div className="booking-actions">
+                          <button className="btn" disabled={busy||!crenPick} onClick={reserverAct}>{busy?'Ajout…':'Confirmer'}</button>
+                          <button className="btn-ghost" onClick={()=>setActSel(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     );
   }
