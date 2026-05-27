@@ -207,17 +207,14 @@
               <div className="howto-step">
                 <span className="howto-icon">🗺️</span>
                 <h3>Choisissez une destination</h3>
-                <p>Explorez plus de 20 destinations authentiques, soigneusement sélectionnées pour un voyage en profondeur.</p>
               </div>
               <div className="howto-step">
                 <span className="howto-icon">🏠</span>
                 <h3>Composez votre séjour</h3>
-                <p>Ajoutez hébergements, transports et expériences locales à votre itinéraire, à votre rythme.</p>
               </div>
               <div className="howto-step">
                 <span className="howto-icon">✈️</span>
                 <h3>Partez l'esprit libre</h3>
-                <p>Confirmez en un clic — tout est prêt pour votre aventure slow travel.</p>
               </div>
             </div>
           </div>
@@ -380,7 +377,12 @@
 
         <div className="page">
           <p className="dest-desc-full muted">{destination.description}</p>
-          {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{margin:'0 0 1rem'}}>{msg}</p>}
+          {msg&&(
+            <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap',margin:'0 0 1rem'}}>
+              <p className={msg.startsWith('✓')?'msg-ok':'error'} style={{margin:0}}>{msg}</p>
+              {msg.startsWith('✓')&&<button className="btn-ghost" style={{fontSize:'.85rem',padding:'.35rem .8rem',whiteSpace:'nowrap'}} onClick={()=>nav('panier')}>Voir mon séjour →</button>}
+            </div>
+          )}
 
           {/* Transports */}
           <section className="detail-section">
