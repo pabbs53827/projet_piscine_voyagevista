@@ -208,3 +208,23 @@ html,body{height:100%;}
 .howto-icon{font-size:2.2rem;line-height:1;}
 .howto-step h3{font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:1.1rem;margin:.25rem 0 0;}
 .howto-step p{margin:0;font-size:.9rem;color:var(--muted);line-height:1.65;}
+
+/* ── Sticky topbar (destination detail) ── */
+.sticky-topbar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);box-shadow:0 2px 12px rgba(0,0,0,.07);}
+.sticky-topbar .topbar{padding:.65rem 0;border-bottom:none;}
+
+/* ── Widget flottant séjour ── */
+.sejour-float{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--forest);color:#fff;border-radius:14px;padding:.9rem 1.2rem;display:flex;align-items:center;gap:1.25rem;box-shadow:0 8px 32px rgba(0,0,0,.22);animation:float-in .22s ease;}
+.sejour-float-n{font-size:.75rem;opacity:.65;margin:0;letter-spacing:.02em;}
+.sejour-float-price{font-size:1.25rem;font-weight:700;margin:.1rem 0 0;line-height:1;}
+.sejour-float-btn{background:rgba(255,255,255,.18)!important;border:1px solid rgba(255,255,255,.28)!important;color:#fff!important;font-size:.88rem;padding:.45rem .9rem;}
+.sejour-float-btn:hover{background:rgba(255,255,255,.28)!important;}
+@keyframes float-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Modale de confirmation ── */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);display:grid;place-items:center;padding:1.5rem;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+.modal-card{background:var(--paper);border-radius:var(--radius);padding:2rem;max-width:400px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);}
+.modal-msg{margin:0 0 1.75rem;font-size:1rem;line-height:1.6;color:var(--ink);}
+.modal-actions{display:flex;gap:.75rem;justify-content:flex-end;}
+.btn-danger{background:#c0392b!important;}
+.btn-danger:hover{background:#a93226!important;}

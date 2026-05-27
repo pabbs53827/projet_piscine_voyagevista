@@ -87,6 +87,21 @@
     );
   }
 
+  /* ─ Modale de confirmation ─ */
+  function ConfirmModal({msg, onOk, onCancel}) {
+    return (
+      <div className="modal-overlay" onClick={onCancel}>
+        <div className="modal-card" onClick={e=>e.stopPropagation()}>
+          <p className="modal-msg">{msg}</p>
+          <div className="modal-actions">
+            <button className="btn-ghost" onClick={onCancel}>Annuler</button>
+            <button className="btn btn-danger" onClick={onOk}>Confirmer</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ─ Connexion / Inscription ─ */
   function Login({onLogin}) {
     const [mode, setMode] = useState('login');
@@ -297,6 +312,14 @@
     const [msg,setMsg]     = useState('');
     const [msgOk,setMsgOk] = useState(false);
     const [busy,setBusy]   = useState(false);
+    const [scrolled,setScrolled]         = useState(false);
+    const [sejourResume,setSejourResume] = useState({n:0, total:0});
+
+    useEffect(()=>{
+      const handle = ()=>setScrolled(window.scrollY > 320);
+      window.addEventListener('scroll', handle, {passive:true});
+      return ()=>window.removeEventListener('scroll', handle);
+    },[]);
 
     useEffect(()=>{
       Promise.all([
@@ -323,8 +346,9 @@
     async function reserverHeb(){
       if(!hebSel||!dateDebut||!dateFin) return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
-        await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_hebergement:hebSel.id_hebergement,date_debut:dateDebut,date_fin:dateFin})});
+        const r=await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_hebergement:hebSel.id_hebergement,date_debut:dateDebut,date_fin:dateFin})});
         setMsg('Hébergement ajouté à votre séjour !'); setMsgOk(true); setHebSel(null);
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
       }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
     async function ouvrirAct(a){
@@ -335,15 +359,17 @@
     async function reserverAct(){
       if(!crenPick)return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
-        await api('ajouter_activite.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_creneau:crenPick,nb_participants:nbPart})});
+        const r=await api('ajouter_activite.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_creneau:crenPick,nb_participants:nbPart})});
         setMsg('Activité ajoutée !'); setMsgOk(true); setActSel(null);
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
       }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
     async function reserverTransport(){
       if(!trPick)return; setBusy(true); setMsg(''); setMsgOk(false);
       try{
-        await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass,sens:sensTr})});
+        const r=await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass,sens:sensTr})});
         setMsg('Transport ajouté à votre séjour !'); setMsgOk(true); setShowTr(false);
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
         // rafraîchir les transports
         const d=await api(`transports.php?destination=${destination.id_destination}`);
         setData(prev=>({...prev,transports:d.transports}));
@@ -357,6 +383,22 @@
 
     return (
       <div>
+        {scrolled&&(
+          <div className="sticky-topbar">
+            <div style={{maxWidth:'1040px',margin:'0 auto',padding:'0 1.5rem'}}>
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+            </div>
+          </div>
+        )}
+        {sejourResume.n>0&&(
+          <div className="sejour-float">
+            <div>
+              <p className="sejour-float-n">{sejourResume.n} réservation{sejourResume.n>1?'s':''}</p>
+              <p className="sejour-float-price">{sejourResume.total.toFixed(0)} €</p>
+            </div>
+            <button className="btn sejour-float-btn" onClick={()=>nav('panier')}>Mon séjour →</button>
+          </div>
+        )}
         {/* Banner photo */}
         <div className="dest-banner">
           {destination.image_url
@@ -526,6 +568,7 @@
     const [loading,setLoading]   = useState(true);
     const [busy,setBusy]         = useState(false);
     const [error,setError]       = useState('');
+    const [confirmModal,setConfirmModal] = useState(null);
     const [showPaiement,setShowPaiement] = useState(false);
     const defCard={titulaire:'',numero:'',expiry:'',cvv:''};
     const [card,setCard] = useState(defCard);
@@ -555,11 +598,12 @@
       try{ await api(`retirer_${type}.php`,{method:'POST',body:JSON.stringify({id})}); await reload(); }
       catch(err){setError(err.message);}finally{setBusy(false);}
     }
-    async function supprimerSejour(){
-      if(!confirm('Supprimer ce séjour ? Cette action est irréversible.'))return;
-      setBusy(true); setError('');
-      try{ await api('supprimer_sejour.php',{method:'POST'}); await reload(); }
-      catch(err){setError(err.message);}finally{setBusy(false);}
+    function supprimerSejour(){
+      setConfirmModal({msg:'Supprimer ce séjour ? Cette action est irréversible.', fn:async()=>{
+        setBusy(true); setError('');
+        try{ await api('supprimer_sejour.php',{method:'POST'}); await reload(); }
+        catch(err){setError(err.message);}finally{setBusy(false);}
+      }});
     }
     async function valider(e){
       e.preventDefault(); setBusy(true); setError('');
@@ -573,6 +617,7 @@
 
     if(showPaiement) return (
       <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
         <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>setShowPaiement(false)}>← Retour au séjour</button>
@@ -605,6 +650,7 @@
 
     return (
       <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
         <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
@@ -806,6 +852,7 @@
     const [loading,setLoading]   = useState(true);
     const [msg,setMsg]   = useState('');
     const [busy,setBusy] = useState(false);
+    const [confirmModal,setConfirmModal] = useState(null);
     const [showHebForm,setShowHebForm] = useState(false);
     const [showActForm,setShowActForm] = useState(false);
     const [showDispoFor,setShowDispoFor] = useState(null);
@@ -847,6 +894,7 @@
     if(loading)return <div className="screen-center muted">Chargement…</div>;
     return (
       <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
         <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace hôte</h1>
@@ -881,12 +929,11 @@
               </div>
               <div style={{display:'flex',gap:'.5rem'}}>
                 <button className="btn-ghost" onClick={()=>{setShowDispoFor(h.id_hebergement);setMsg('');}}>+ Dispo</button>
-                <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
-                  if(!confirm('Supprimer cet hébergement ?'))return;
+                <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:'Supprimer cet hébergement ?', fn:async()=>{
                   setBusy(true);setMsg('');
                   try{await api('hote_supprimer_hebergement.php',{method:'POST',body:JSON.stringify({id:h.id_hebergement})});await reload();}
                   catch(err){setMsg(err.message);}finally{setBusy(false);}
-                }}>Supprimer</button>
+                }})}>Supprimer</button>
               </div>
             </div>
           ))}
@@ -935,12 +982,11 @@
               <div><strong>{a.nom}</strong> <span className="tag">{a.categorie}</span> <span className="tag">{a.destination}</span>
                 <p className="muted small">{a.prix_personne} €/pers. · {a.nb_creneaux} créneau(x) dispo.</p>
               </div>
-              <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
-                if(!confirm('Supprimer cette activité ?'))return;
+              <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:'Supprimer cette activité ?', fn:async()=>{
                 setBusy(true);setMsg('');
                 try{await api('hote_supprimer_activite.php',{method:'POST',body:JSON.stringify({id:a.id_activite})});await reload();}
                 catch(err){setMsg(err.message);}finally{setBusy(false);}
-              }}>Supprimer</button>
+              }})}>Supprimer</button>
             </div>
           ))}
         </section>
@@ -954,6 +1000,7 @@
     const [loading,setLoading] = useState(true);
     const [msg,setMsg]   = useState('');
     const [busy,setBusy] = useState(false);
+    const [confirmModal,setConfirmModal] = useState(null);
     const [showForm,setShowForm]   = useState(false);
     const [showTrForm,setShowTrForm] = useState(false);
     const defDest={nom:'',pays:'',region:'',description:'',latitude:'',longitude:''};
@@ -982,6 +1029,7 @@
     const s=data?.stats??{};
     return (
       <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
         <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace admin</h1>
@@ -1019,12 +1067,11 @@
                 {d.region&&<span className="muted small" style={{marginLeft:'.5rem'}}>{d.region}</span>}
                 <p className="muted small">{d.nb_hebergements} hébergement(s)</p>
               </div>
-              <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
-                if(!confirm(`Supprimer la destination "${d.nom}" ?`))return;
+              <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:`Supprimer la destination "${d.nom}" ?`, fn:async()=>{
                 setBusy(true);setMsg('');
                 try{await api('admin_supprimer_destination.php',{method:'POST',body:JSON.stringify({id:d.id_destination})});await reload();}
                 catch(err){setMsg(err.message);}finally{setBusy(false);}
-              }}>Supprimer</button>
+              }})}>Supprimer</button>
             </div>
           ))}
         </section>
@@ -1071,14 +1118,11 @@
                 {s.date_debut&&<p className="muted small">{fmtDate(s.date_debut)} → {fmtDate(s.date_fin)} · {Number(s.prix_total).toFixed(2)} €</p>}
               </div>
               {s.statut==='brouillon'&&(
-                <button className="btn-danger-sm" disabled={busy} onClick={async()=>{
-                  if(!confirm(`Supprimer le séjour "${s.titre}" ?`))return;
+                <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:`Supprimer le séjour "${s.titre}" ?`, fn:async()=>{
                   setBusy(true);setMsg('');
-                  try{
-                    await api('supprimer_sejour.php',{method:'POST'});
-                    await reload();
-                  }catch(err){setMsg(err.message);}finally{setBusy(false);}
-                }}>Supprimer</button>
+                  try{await api('supprimer_sejour.php',{method:'POST'});await reload();}
+                  catch(err){setMsg(err.message);}finally{setBusy(false);}
+                }})}>Supprimer</button>
               )}
             </div>
           ))}
