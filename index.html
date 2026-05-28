@@ -46,7 +46,7 @@
   const transportIcon = t => ({avion:'✈️',train:'🚂',bus:'🚌',ferry:'⛴️'}[t]||'🚗');
 
   /* ─ Topbar ─ */
-  function Topbar({user,onLogout,nav,nbNotifs=0,nbItems=0,variant}) {
+  function Topbar({user,onLogout,nav,nbNotifs=0,nbItems=0,variant,currency='EUR',changeCurrency=null}) {
     const [menuOpen,setMenuOpen] = useState(false);
     const [darkMode,setDarkMode] = useState(()=>document.documentElement.getAttribute('data-theme')==='dark');
     const menuRef = useRef(null);
