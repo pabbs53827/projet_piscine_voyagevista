@@ -841,7 +841,7 @@
   }
 
   /* ─ Panier ─ */
-  function Panier({user,onLogout,nav,nbNotifs,nbItems=0}) {
+  function Panier({user,onLogout,nav,nbNotifs,nbItems=0,currency='EUR',changeCurrency=null}) {
     const [data,setData]         = useState(null);
     const [loading,setLoading]   = useState(true);
     const [busy,setBusy]         = useState(false);
@@ -1044,7 +1044,7 @@
   }
 
   /* ─ Profil ─ */
-  function Profil({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+  function Profil({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
     const [profil,setProfil]   = useState(null);
     const [loading,setLoading] = useState(true);
     const [edit,setEdit]       = useState(false);
@@ -1103,7 +1103,7 @@
   }
 
   /* ─ Notifications ─ */
-  function Notifications({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+  function Notifications({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
     const [notifs,setNotifs]   = useState([]);
     const [loading,setLoading] = useState(true);
     useEffect(()=>{ api('notifications.php').then(d=>setNotifs(d.notifications)).finally(()=>setLoading(false)); },[]);
@@ -1131,7 +1131,7 @@
   }
 
   /* ─ Espace hôte ─ */
-  function HoteDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+  function HoteDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
     const [data,setData]         = useState(null);
     const [destinations,setDests] = useState([]);
     const [loading,setLoading]   = useState(true);
@@ -1280,7 +1280,7 @@
   }
 
   /* ─ Espace admin ─ */
-  function AdminDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+  function AdminDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
     const [data,setData]     = useState(null);
     const [loading,setLoading] = useState(true);
     const [msg,setMsg]   = useState('');
@@ -1439,7 +1439,7 @@
   }
 
   /* ─ Historique des séjours ─ */
-  function Historique({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+  function Historique({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
     const [historique,setHistorique] = useState([]);
     const [loading,setLoading]       = useState(true);
     const [avisModal,setAvisModal]   = useState(null);
@@ -1582,8 +1582,8 @@
     const [currency,setCurrency] = useState(localStorage.getItem('vv_currency')||'EUR');
     const [rates,setRates]       = useState({EUR:1,USD:1.08,GBP:0.86,JPY:163});
     useEffect(()=>{
-      fetch('https://api.frankfurter.app/latest?from=EUR&to=USD,GBP,JPY')
-        .then(r=>r.json()).then(d=>setRates({EUR:1,...d.rates})).catch(()=>{});
+      fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json')
+        .then(r=>r.json()).then(d=>setRates({EUR:1,USD:d.eur.usd,GBP:d.eur.gbp,JPY:d.eur.jpy})).catch(()=>{});
     },[]);
     const SYMBOLS={EUR:'€',USD:'$',GBP:'£',JPY:'¥'};
     function fmtCur(eur){
