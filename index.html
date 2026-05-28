@@ -68,6 +68,12 @@
         <p className="brand" onClick={()=>nav('catalogue')} style={{cursor:'pointer'}}>VoyageVista</p>
         <div className="topbar-right" ref={menuRef}>
           {user && <>
+            {changeCurrency&&<select className="currency-select" value={currency} onChange={e=>changeCurrency(e.target.value)}>
+              <option value="EUR">€ EUR</option>
+              <option value="USD">$ USD</option>
+              <option value="GBP">£ GBP</option>
+              <option value="JPY">¥ JPY</option>
+            </select>}
             <span className={dark?'topbar-muted':'muted'}>Bonjour, {user.prenom}</span>
             <button className={`btn-hamburger${dark?' btn-hamburger-dark':''}`}
               onClick={()=>setMenuOpen(o=>!o)} aria-label="Menu">
@@ -267,7 +273,7 @@
   }
 
   /* ─ Catalogue ─ */
-  function Catalogue({user,onLogout,nav,nbNotifs,nbItems=0}) {
+  function Catalogue({user,onLogout,nav,nbNotifs,nbItems=0,fmtCur,currency,changeCurrency}) {
     const [destinations,setDestinations] = useState([]);
     const [paysList,setPaysList]         = useState([]);
     const [q,setQ]       = useState('');
@@ -277,9 +283,19 @@
     const [loading,setLoading] = useState(true);
     const [error,setError]     = useState('');
     const [suggestions,setSuggestions] = useState([]);
+    const [favoris,setFavoris] = useState(new Set());
+    const [showFavOnly,setShowFavOnly] = useState(false);
     const sugRef = useRef(null);
     const debRef = useRef(null);
-    useEffect(()=>{ load(); },[]);
+    useEffect(()=>{
+      load();
+      api('favoris.php').then(d=>setFavoris(new Set(d.favoris.map(Number)))).catch(()=>{});
+    },[]);
+    async function toggleFavori(e,id){
+      e.stopPropagation();
+      const r=await api('favoris.php',{method:'POST',body:JSON.stringify({id_destination:id})}).catch(()=>null);
+      if(r) setFavoris(prev=>{ const s=new Set(prev); r.action==='added'?s.add(id):s.delete(id); return s; });
+    }
     useEffect(()=>{
       const h=e=>{if(sugRef.current&&!sugRef.current.contains(e.target))setSuggestions([]);};
       document.addEventListener('mousedown',h);
@@ -309,7 +325,7 @@
     return (
       <div className="catalogue-page">
         <section className="hero-section">
-          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark"/>
+          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark" currency={currency} changeCurrency={changeCurrency}/>
           <div className="hero-content">
             <img src="logo.png" alt="VoyageVista" className="hero-logo"/>
             <p className="hero-sub">Partez vraiment. Restez plus longtemps.<br/>Vivez là-bas comme un·e local·e.</p>
@@ -352,6 +368,9 @@
         </section>
         <div className="page">
           <div className="filter-bar">
+            <button className={`btn-fav-filter${showFavOnly?' active':''}`} onClick={()=>setShowFavOnly(v=>!v)}>
+              {showFavOnly?'♥':'♡'} Favoris
+            </button>
             <label className="filter-item">
               <span>Pays</span>
               <select value={pays} onChange={e=>handlePays(e.target.value)}>
@@ -380,7 +399,7 @@
             {error   && <p className="error">{error}</p>}
             {view==='globe'&&!loading&&<GlobeView destinations={destinations} nav={nav}/>}
             <div className="grid" style={{display:view==='globe'?'none':'grid'}}>
-              {destinations.map(d=>(
+              {destinations.filter(d=>!showFavOnly||favoris.has(d.id_destination)).map(d=>(
                 <article key={d.id_destination} className="card dest-card"
                   onClick={()=>nav('destination',d)} role="button" tabIndex={0}
                   onKeyDown={e=>e.key==='Enter'&&nav('destination',d)}>
@@ -392,12 +411,15 @@
                       <span className="dest-pays-badge">{d.pays}</span>
                       {d.nb_hebergements>0&&<span className="dest-count">{d.nb_hebergements} héb.</span>}
                     </div>
+                    <button className={`fav-btn${favoris.has(d.id_destination)?' fav-active':''}`} onClick={e=>toggleFavori(e,d.id_destination)} title="Ajouter aux favoris">
+                      {favoris.has(d.id_destination)?'♥':'♡'}
+                    </button>
                   </div>
                   <div className="dest-card-body">
                     <h2 className="dest-name">{d.nom}</h2>
                     <p className="dest-desc">{d.description}</p>
                     <div className="dest-card-footer">
-                      {d.prix_min&&<p className="dest-price">À partir de <strong>{Number(d.prix_min).toFixed(0)} €</strong><span className="muted small"> / sem.</span></p>}
+                      {d.prix_min&&fmtCur&&<p className="dest-price">À partir de <strong>{fmtCur(d.prix_min)}</strong><span className="muted small"> / sem.</span></p>}
                       <span className="voir-plus">Explorer →</span>
                     </div>
                   </div>
@@ -586,7 +608,7 @@
         {scrolled&&(
           <div className="sticky-topbar">
             <div style={{maxWidth:'1040px',margin:'0 auto',padding:'0 1.5rem'}}>
-              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
             </div>
           </div>
         )}
@@ -606,7 +628,7 @@
             : <div className="dest-banner-placeholder"/>}
           <div className="dest-banner-overlay">
             <div className="dest-banner-topbar">
-              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark"/>
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark" currency={currency} changeCurrency={changeCurrency}/>
             </div>
             <div className="dest-banner-content">
               <button className="btn-back-banner" onClick={()=>nav('catalogue')}>← Retour</button>
@@ -874,7 +896,7 @@
     if(showPaiement) return (
       <div className="page">
         {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>setShowPaiement(false)}>← Retour au séjour</button>
           <h1 className="detail-title">Paiement</h1>
@@ -906,7 +928,7 @@
     return (
       <div className="page">
         {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mon séjour</h1>
@@ -1045,7 +1067,7 @@
     const roleLabel={voyageur:'Voyageur',hote:'Hôte',admin:'Administrateur'};
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mon profil</h1>
@@ -1089,7 +1111,7 @@
     const icons={reservation_confirmee:'✓',depart_proche:'✈',modification:'📝',activite_a_venir:'⭐',systeme:'ℹ'};
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Notifications</h1>
@@ -1158,7 +1180,7 @@
     return (
       <div className="page">
         {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace hôte</h1>
           <p className="muted">Gérez vos hébergements et vos expériences locales.</p>
@@ -1293,7 +1315,7 @@
     return (
       <div className="page">
         {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <h1 className="detail-title">Espace admin</h1>
           <p className="muted">Gérez les destinations et modérez les contenus.</p>
@@ -1446,7 +1468,7 @@
     if(loading)return <div className="screen-center muted">Chargement…</div>;
     return (
       <div className="page">
-        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
         <div className="detail-header">
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mes voyages</h1>
@@ -1462,6 +1484,7 @@
               </div>
               <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
                 <span className="tag tag-ok">validé</span>
+                <button className="btn-ghost" style={{fontSize:'.82rem',padding:'.3rem .7rem'}} onClick={()=>setPrintSejour({sejour,hebergements,activites,transports})}>PDF</button>
                 <button className="btn-ghost" style={{color:'#c0392b',fontSize:'.82rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>annulerSejour(sejour.id_sejour)}>Annuler</button>
               </div>
             </div>
@@ -1501,6 +1524,27 @@
             ))}
           </section>
         ))}
+        {printSejour&&(
+          <div className="print-overlay">
+            <div style={{textAlign:'center',marginBottom:'2rem'}}>
+              <h1 style={{margin:'0 0 .25rem'}}>VoyageVista</h1>
+              <p style={{margin:0,color:'#726b5e'}}>Itinéraire de voyage</p>
+            </div>
+            <h2 style={{marginBottom:'.25rem'}}>{printSejour.sejour.titre}</h2>
+            <p style={{color:'#726b5e',marginBottom:'1.5rem'}}>Réservé le {fmtDate(printSejour.sejour.date_creation)} &middot; Total : {Number(printSejour.sejour.prix_total).toFixed(2)} €</p>
+            {(printSejour.transports||[]).length>0&&<><h3>Transports</h3><table className="pdf-table"><tbody>
+              {printSejour.transports.map((t,i)=><tr key={i}><td>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</td><td>{t.type}</td><td>{t.compagnie||''}</td><td>{fmtDatetime(t.date_depart)}</td><td style={{textAlign:'right'}}>{Number(t.prix).toFixed(2)} €</td></tr>)}
+            </tbody></table></>}
+            {(printSejour.hebergements||[]).length>0&&<><h3>Hébergements</h3><table className="pdf-table"><tbody>
+              {printSejour.hebergements.map((h,i)=><tr key={i}><td>{h.nom_hebergement}</td><td>{h.type}</td><td>{fmtDate(h.date_debut)} — {fmtDate(h.date_fin)}</td><td style={{textAlign:'right'}}>{Number(h.prix).toFixed(2)} €</td></tr>)}
+            </tbody></table></>}
+            {(printSejour.activites||[]).length>0&&<><h3>Activités</h3><table className="pdf-table"><tbody>
+              {printSejour.activites.map((a,i)=><tr key={i}><td>{a.nom_activite}</td><td>{a.categorie}</td><td>{fmtDatetime(a.date_heure)}</td><td style={{textAlign:'right'}}>{Number(a.prix).toFixed(2)} €</td></tr>)}
+            </tbody></table></>}
+            <SejourTimeline hebergements={printSejour.hebergements} activites={printSejour.activites} transports={printSejour.transports}/>
+            <p style={{marginTop:'2rem',fontSize:'.8rem',color:'#726b5e',textAlign:'center'}}>Document généré par VoyageVista &mdash; Paiement simulé, projet pédagogique</p>
+          </div>
+        )}
         {avisModal&&(
           <div className="modal-overlay" onClick={()=>setAvisModal(null)}>
             <div className="modal-card" onClick={e=>e.stopPropagation()}>
@@ -1535,6 +1579,19 @@
     const [vueData,setVueData]   = useState(null);
     const [nbNotifs,setNbNotifs] = useState(0);
     const [nbItems,setNbItems]   = useState(0);
+    const [currency,setCurrency] = useState(localStorage.getItem('vv_currency')||'EUR');
+    const [rates,setRates]       = useState({EUR:1,USD:1.08,GBP:0.86,JPY:163});
+    useEffect(()=>{
+      fetch('https://api.frankfurter.app/latest?from=EUR&to=USD,GBP,JPY')
+        .then(r=>r.json()).then(d=>setRates({EUR:1,...d.rates})).catch(()=>{});
+    },[]);
+    const SYMBOLS={EUR:'€',USD:'$',GBP:'£',JPY:'¥'};
+    function fmtCur(eur){
+      const v=Number(eur)*(rates[currency]||1);
+      const s=SYMBOLS[currency]||currency;
+      return currency==='JPY'?`${Math.round(v)} ${s}`:`${Math.round(v)} ${s}`;
+    }
+    function changeCurrency(c){ setCurrency(c); localStorage.setItem('vv_currency',c); }
     useEffect(()=>{ api('me.php').then(d=>setUser(d.user)).catch(()=>setUser(null)).finally(()=>setLoading(false)); },[]);
     useEffect(()=>{
       if(!user)return;
@@ -1556,7 +1613,7 @@
     if(loading)return <div className="screen-center muted">Chargement…</div>;
     if(!user)  return <Login onLogin={login}/>;
 
-    const common={user,onLogout:logout,nav,nbNotifs,nbItems};
+    const common={user,onLogout:logout,nav,nbNotifs,nbItems,fmtCur,currency,changeCurrency};
     if(vue==='confirmation'&&vueData) return <Confirmation infos={vueData} nav={nav}/>;
     if(vue==='panier')                return <Panier {...common}/>;
     if(vue==='notifications')         return <Notifications {...common}/>;

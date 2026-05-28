@@ -314,9 +314,31 @@ html,body{height:100%;}
 .hist-annule{opacity:.6;}
 
 /* ── Impression ── */
+/* ── Favoris ── */
+.fav-btn{position:absolute;top:.6rem;right:.6rem;background:rgba(255,255,255,.85);border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+.fav-btn:hover{transform:scale(1.2);}
+.fav-btn.fav-active{color:#c0392b;}
+.dest-card-img{position:relative;}
+.btn-fav-filter{font:inherit;cursor:pointer;padding:.4rem .9rem;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);font-size:.85rem;transition:all .15s;white-space:nowrap;}
+.btn-fav-filter:hover{border-color:var(--terra);color:var(--terra);}
+.btn-fav-filter.active{background:var(--terra);color:#fff;border-color:var(--terra);}
+
+/* ── Sélecteur de devise ── */
+.currency-select{font:inherit;font-size:.82rem;padding:.35rem .5rem;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer;}
+
+/* ── PDF / Impression itinéraire ── */
+.print-overlay{display:none;}
 @media print {
-  .no-print, .topbar, .sticky-topbar, .btn-back, .sejour-float, .modal-overlay { display:none!important; }
+  .no-print, .topbar, .sticky-topbar, .btn-back, .sejour-float, .modal-overlay,
+  .booking-panel, .filter-bar, .ctx-bar, .flow-hint, .detail-section:not(.timeline-section) .booking-actions { display:none!important; }
   body { background:#fff!important; color:#000!important; }
   .conf-card { box-shadow:none!important; border:1px solid #ccc!important; max-width:100%!important; }
   .conf-page { display:block!important; padding:2rem; }
+  body > #root > * { display:none!important; }
+  .print-overlay { display:block!important; padding:2.5rem; font-family:'DM Sans',sans-serif; }
+  .print-overlay h1 { font-size:1.8rem; }
+  .print-overlay h3 { margin:1.5rem 0 .5rem; border-bottom:1px solid #ccc; padding-bottom:.25rem; font-size:1rem; text-transform:uppercase; letter-spacing:.05em; color:#555; }
 }
+.pdf-table{width:100%;border-collapse:collapse;font-size:.88rem;margin-bottom:.5rem;}
+.pdf-table td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top;}
+.pdf-table tr:last-child td{border-bottom:none;}
