@@ -46,7 +46,7 @@ $activites = $stmt->fetchAll();
 
 // Transports
 $stmt = $pdo->prepare(
-    'SELECT st.id, st.prix, st.nb_passagers,
+    'SELECT st.id, st.prix, st.nb_passagers, st.sens,
             t.ville_depart, t.type, t.compagnie, t.date_depart, t.date_arrivee,
             d.nom AS destination
      FROM sejour_transport st

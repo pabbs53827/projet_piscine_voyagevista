@@ -150,7 +150,7 @@
     const events = [
       ...(hebergements||[]).map(h=>({type:'heb',date:h.date_debut,endDate:h.date_fin,label:h.nom_hebergement,icon:'🏠'})),
       ...(activites||[]).map(a=>({type:'act',date:a.date_heure,label:a.nom_activite,icon:'🎯'})),
-      ...(transports||[]).map(t=>({type:'tr',date:t.date_depart,label:`${t.ville_depart} → ${t.destination}`,icon:transportIcon(t.type)})),
+      ...(transports||[]).map(t=>({type:'tr',date:t.date_depart,label:t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`,icon:transportIcon(t.type)})),
     ].filter(e=>e.date).sort((a,b)=>new Date(a.date)-new Date(b.date));
     if(!events.length) return null;
     return (
@@ -427,18 +427,19 @@
     const [actSel,setActSel]     = useState(null);
     const [crenPick,setCrenPick] = useState(null);
     const [nbPart,setNbPart]     = useState(1);
+    // contexte séjour (dates + voyageurs globaux)
+    const [ctx,setCtx] = useState({dateAller:'',dateRetour:'',nbVoy:1,allerVille:'',retourBooked:false});
     // transport
-    const [trPick,setTrPick]     = useState(null);
-    const [nbPass,setNbPass]     = useState(1);
-    const [showTr,setShowTr]     = useState(null);
-    const [sensTr,setSensTr]     = useState('aller');
-    const [trDateFilter,setTrDateFilter] = useState(()=>new Date().toISOString().split('T')[0]);
+    const [showTr,setShowTr]   = useState(null);
+    const [trBooking,setTrBooking] = useState({sens:'aller',nbPass:1,dateChoisie:''});
+    const [sectionTrSens,setSectionTrSens] = useState('aller');
     const [msg,setMsg]     = useState('');
     const [msgOk,setMsgOk] = useState(false);
     const [busy,setBusy]   = useState(false);
     const [scrolled,setScrolled]         = useState(false);
     const [sejourResume,setSejourResume] = useState({n:0, total:0});
     const [meteo,setMeteo]               = useState(null);
+    const hebSectionRef = useRef(null);
 
     useEffect(()=>{
       const handle = ()=>setScrolled(window.scrollY > 320);
@@ -469,12 +470,24 @@
         .catch(err=>setMsg(err.message)).finally(()=>setLoading(false));
     },[destination.id_destination]);
 
+    useEffect(()=>{ if(showTr) setTrBooking(b=>({...b,nbPass:ctx.nbVoy})); },[ctx.nbVoy]);
+    useEffect(()=>{ if(ctx.nbVoy>1) setCapaMin(String(ctx.nbVoy)); },[ctx.nbVoy]);
+    useEffect(()=>{
+      if(ctx.retourBooked && hebSectionRef.current){
+        setTimeout(()=>hebSectionRef.current.scrollIntoView({behavior:'smooth',block:'start'}), 150);
+      }
+    },[ctx.retourBooked]);
+
     function ouvrirHeb(h){
-      setMsg(''); setMsgOk(false); setActSel(null); setShowTr(false);
-      const d1=new Date(); d1.setDate(d1.getDate()+1);
-      const d2=new Date(); d2.setDate(d2.getDate()+8);
-      const fmt=d=>d.toISOString().split('T')[0];
-      setDateDebut(fmt(d1)); setDateFin(fmt(d2));
+      setMsg(''); setMsgOk(false); setActSel(null);
+      if(ctx.dateAller&&ctx.dateRetour){
+        setDateDebut(ctx.dateAller); setDateFin(ctx.dateRetour);
+      } else {
+        const d1=new Date(); d1.setDate(d1.getDate()+1);
+        const d2=new Date(); d2.setDate(d2.getDate()+8);
+        const fmt=d=>d.toISOString().split('T')[0];
+        setDateDebut(fmt(d1)); setDateFin(fmt(d2));
+      }
       setHebSel(h);
     }
     function previewPrix(h){
@@ -492,9 +505,13 @@
       }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
     async function ouvrirAct(a){
-      setMsg(''); setMsgOk(false); setHebSel(null); setShowTr(false);
+      setMsg(''); setMsgOk(false); setHebSel(null);
       const d=await api(`creneaux.php?activite=${a.id_activite}`);
-      setActSel({act:a,creneaux:d.creneaux}); setCrenPick(d.creneaux[0]?.id_creneau??null); setNbPart(1);
+      let creneaux=d.creneaux;
+      if(ctx.dateAller&&ctx.dateRetour){
+        creneaux=creneaux.filter(c=>c.date_heure>=ctx.dateAller&&c.date_heure<=ctx.dateRetour+' 23:59:59');
+      }
+      setActSel({act:a,creneaux}); setCrenPick(creneaux[0]?.id_creneau??null); setNbPart(ctx.nbVoy);
     }
     async function reserverAct(){
       if(!crenPick)return; setBusy(true); setMsg(''); setMsgOk(false);
@@ -504,14 +521,57 @@
         setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
       }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
+    function fmtTrDt(s){
+      const [date,time]=(s||'').split(' ');
+      if(!date) return '';
+      const [y,m,j]=date.split('-');
+      return `${j}/${m}/${y} à ${(time||'').slice(0,5)}`;
+    }
+    function fmtTrDate(s){
+      const [date]=(s||'').split(' ');
+      if(!date) return '';
+      const [y,m,j]=date.split('-');
+      return `${j}/${m}/${y}`;
+    }
+    function fmtTrTime(s){
+      const [,time]=(s||'').split(' ');
+      return time ? time.slice(0,5) : '';
+    }
+    function buildTrDates(t, dateChoisie){
+      const deptTime  = (t.date_depart  ||'').slice(11,16)||'00:00';
+      const arrivTime = (t.date_arrivee ||'').slice(11,16)||'00:00';
+      const d1 = new Date(t.date_depart), d2 = new Date(t.date_arrivee);
+      const dayOffset = (!isNaN(d1)&&!isNaN(d2)) ? Math.round((d2-d1)/86400000) : 0;
+      const arrivDate = new Date(dateChoisie);
+      arrivDate.setDate(arrivDate.getDate()+dayOffset);
+      return {
+        dateDepart:  `${dateChoisie} ${deptTime}:00`,
+        dateArrivee: `${arrivDate.toISOString().split('T')[0]} ${arrivTime}:00`,
+      };
+    }
+    function openTr(t){
+      const initSens = sectionTrSens;
+      const initDate = initSens==='retour' ? (ctx.dateRetour||'') : (ctx.dateAller||'');
+      setMsg(''); setMsgOk(false);
+      setShowTr(t.id_transport);
+      setTrBooking({sens:initSens, nbPass:ctx.nbVoy, dateChoisie:initDate});
+    }
     async function reserverTransport(){
-      if(!trPick)return; setBusy(true); setMsg(''); setMsgOk(false);
+      const t = (data?.transports??[]).find(x=>x.id_transport===showTr);
+      if(!t||!trBooking.dateChoisie) return;
+      setBusy(true); setMsg(''); setMsgOk(false);
       try{
-        const r=await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_transport:trPick,nb_passagers:nbPass,sens:sensTr})});
-        setMsg('Transport ajouté à votre séjour !'); setMsgOk(true); setShowTr(false);
+        const {dateDepart,dateArrivee} = buildTrDates(t, trBooking.dateChoisie);
+        const r=await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({
+          id_sejour:sejourId, id_transport:t.id_transport, sens:trBooking.sens,
+          date_depart:dateDepart, date_arrivee:dateArrivee, nb_passagers:ctx.nbVoy
+        })});
+        setMsg('Transport ajouté à votre séjour !'); setMsgOk(true); setShowTr(null);
+        if(trBooking.sens==='aller'){ setCtx(c=>({...c,allerVille:t.ville_depart})); setSectionTrSens('retour'); }
+        if(trBooking.sens==='retour'){ setCtx(c=>({...c,retourBooked:true})); }
         setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
-        // rafraîchir les transports
-        const d=await api(`transports.php?destination=${destination.id_destination}`);
+        // Rafraîchir les cartes pour refléter les nouvelles places_dispo
+        const d=await api(`destination.php?id=${destination.id_destination}`);
         setData(prev=>({...prev,transports:d.transports}));
       }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
     }
@@ -561,6 +621,23 @@
 
         <div className="page">
           <p className="dest-desc-full muted">{destination.description}</p>
+
+          {/* Contexte séjour */}
+          <div className="ctx-bar">
+            <label className="field">
+              <span>Date d'arrivée</span>
+              <input type="date" value={ctx.dateAller} min={new Date().toISOString().split('T')[0]} onChange={e=>setCtx(c=>({...c,dateAller:e.target.value}))}/>
+            </label>
+            <label className="field">
+              <span>Date de retour</span>
+              <input type="date" value={ctx.dateRetour} min={ctx.dateAller||new Date().toISOString().split('T')[0]} onChange={e=>setCtx(c=>({...c,dateRetour:e.target.value}))}/>
+            </label>
+            <label className="field">
+              <span>Voyageurs</span>
+              <input type="number" min="1" value={ctx.nbVoy} onChange={e=>setCtx(c=>({...c,nbVoy:Math.max(1,parseInt(e.target.value)||1)}))} style={{width:'75px'}}/>
+            </label>
+          </div>
+
           {msg&&(
             <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap',margin:'0 0 1rem'}}>
               <p className={msgOk?'msg-ok':'error'} style={{margin:0}}>{msgOk?'✓ ':''}{msg}</p>
@@ -568,56 +645,78 @@
             </div>
           )}
 
+          {/* Hint si pas de dates */}
+          {(!ctx.dateAller||!ctx.dateRetour)&&(
+            <p className="flow-hint">Renseignez vos dates et le nombre de voyageurs pour commencer.</p>
+          )}
+
           {/* Transports */}
-          <section className="detail-section">
+          {ctx.dateAller&&ctx.dateRetour&&(
+          <section className="detail-section section-revealed">
             <h2 className="section-title">Transports disponibles</h2>
-            <div className="filter-bar" style={{marginBottom:'1rem'}}>
-              <label className="filter-item">
-                <span>Partir à partir du</span>
-                <input type="date" value={trDateFilter} onChange={e=>setTrDateFilter(e.target.value)} min={new Date().toISOString().split('T')[0]}/>
-              </label>
-            </div>
-            {transports.filter(t=>!trDateFilter||t.date_depart>=trDateFilter).length===0&&<p className="muted">Aucun transport disponible pour cette période.</p>}
+            {ctx.allerVille&&(
+              <div className="tr-sens-toggle">
+                <button className={`sens-tab${sectionTrSens==='aller'?' active':''}`} onClick={()=>{setSectionTrSens('aller');setShowTr(null);}}>Trajets aller</button>
+                <button className={`sens-tab${sectionTrSens==='retour'?' active':''}`} onClick={()=>{setSectionTrSens('retour');setShowTr(null);}}>Retour depuis {ctx.allerVille}</button>
+              </div>
+            )}
+            {(()=>{ const vt = sectionTrSens==='retour'&&ctx.allerVille ? transports.filter(t=>t.ville_depart===ctx.allerVille) : transports; return (
+            <>
+            {vt.length===0&&<p className="muted">Aucun transport disponible pour cette destination.</p>}
             <div className="grid">
-              {transports.filter(t=>!trDateFilter||t.date_depart>=trDateFilter).map(t=>(
+              {vt.map(t=>(
                 <article key={t.id_transport} className="card tr-card">
                   <div className="card-tag-row">
                     <span className="tag">{transportIcon(t.type)} {t.type}</span>
                     {t.compagnie&&<span className="tag">{t.compagnie}</span>}
                   </div>
-                  <h3 className="card-title">{t.ville_depart} → {destination.nom}</h3>
-                  <div className="tr-dates">
-                    <div><span className="muted small">Départ</span><strong>{fmtDatetime(t.date_depart)}</strong></div>
-                    <div><span className="muted small">Arrivée</span><strong>{fmtDatetime(t.date_arrivee)}</strong></div>
-                  </div>
+                  <h3 className="card-title">{sectionTrSens==='retour'?`${destination.nom} → ${t.ville_depart}`:`${t.ville_depart} → ${destination.nom}`}</h3>
                   <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
                   <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s)</p>
-                  <button className="btn" style={{width:'100%'}} onClick={()=>{setShowTr(t.id_transport);setTrPick(t.id_transport);setNbPass(1);setSensTr('aller');setMsg('');}}>Réserver</button>
-                  {showTr===t.id_transport&&(
+                  <button className="btn" style={{width:'100%'}} onClick={()=>showTr===t.id_transport?setShowTr(null):openTr(t)}>
+                    {showTr===t.id_transport?'Fermer':'Réserver'}
+                  </button>
+                  {showTr===t.id_transport&&(()=>{
+                    const preview = buildTrDates(t, trBooking.dateChoisie);
+                    return (
                     <div className="booking-panel">
-                      <div className="sens-row">
-                        <button className={`sens-btn${sensTr==='aller'?' active':''}`} onClick={()=>setSensTr('aller')}>✈ Aller</button>
-                        <button className={`sens-btn${sensTr==='retour'?' active':''}`} onClick={()=>setSensTr('retour')}>✈ Retour</button>
+                      <div className="tr-schedule-preview">
+                        <div>
+                          <span className="muted small">Départ</span>
+                          <strong>{fmtTrDate(preview.dateDepart)}</strong>
+                          <strong>{fmtTrTime(preview.dateDepart)}</strong>
+                        </div>
+                        <div>
+                          <span className="muted small">Arrivée</span>
+                          <strong>{fmtTrDate(preview.dateArrivee)}</strong>
+                          <strong>{fmtTrTime(preview.dateArrivee)}</strong>
+                        </div>
                       </div>
-                      <label className="field" style={{marginBottom:'.75rem'}}>
-                        <span>Passagers</span>
-                        <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'90px'}}/>
-                        <span className="muted small" style={{marginLeft:'.5rem'}}>max {t.places_dispo}</span>
-                      </label>
-                      <p className="prix-preview">Total : <strong>{(Number(t.prix)*nbPass).toFixed(0)} €</strong></p>
+                      <p className="prix-preview">Total : <strong>{(Number(t.prix)*ctx.nbVoy).toFixed(0)} €</strong><span className="muted small"> ({Number(t.prix).toFixed(0)} € × {ctx.nbVoy} pers.)</span></p>
                       <div className="booking-actions">
                         <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
                         <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </article>
               ))}
             </div>
+            </>
+          ); })()}
           </section>
+          )}
 
-          {/* Hébergements */}
-          <section className="detail-section">
+          {/* Hint intermédiaire — aller réservé mais pas encore le retour */}
+          {ctx.allerVille&&!ctx.retourBooked&&(
+            <p className="flow-hint">Réservez maintenant votre trajet retour pour accéder aux hébergements.</p>
+          )}
+
+          {/* Hébergements + Activités — apparaissent après aller + retour réservés */}
+          {ctx.retourBooked&&(
+          <>
+          <section ref={hebSectionRef} className="detail-section section-revealed">
             <h2 className="section-title">Hébergements</h2>
             <div className="filter-bar" style={{marginBottom:'1rem'}}>
               <label className="filter-item"><span>Prix max (€/sem)</span>
@@ -666,7 +765,7 @@
           </section>
 
           {/* Activités */}
-          <section className="detail-section">
+          <section className="detail-section section-revealed" style={{animationDelay:'.15s'}}>
             <h2 className="section-title">Expériences locales</h2>
             {activites.length===0&&<p className="muted">Aucune activité proposée.</p>}
             <div className="grid">
@@ -712,6 +811,8 @@
               ))}
             </div>
           </section>
+          </>
+          )}
         </div>
       </div>
     );
@@ -797,7 +898,6 @@
             </div>
             {error&&<p className="error">{error}</p>}
             <button type="submit" className="btn" style={{width:'100%',marginTop:'.5rem'}} disabled={busy}>{busy?'Traitement…':'Confirmer le paiement →'}</button>
-            <p className="muted small" style={{marginTop:'.5rem',textAlign:'center'}}>Simulation pédagogique — aucune transaction réelle.</p>
           </form>
         </div>
       </div>
@@ -819,8 +919,11 @@
               <h2 className="section-title">Transports</h2>
               {data.transports.map(t=>(
                 <div key={t.id} className="panier-item">
-                  <div><strong>{t.ville_depart} → {t.destination}</strong> <span className="tag">{transportIcon(t.type)} {t.type}</span>
+                  <div>
+                    <strong>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</strong>
+                    {' '}<span className="tag">{transportIcon(t.type)} {t.type}</span>
                     {t.compagnie&&<span className="muted small" style={{marginLeft:'.4rem'}}>{t.compagnie}</span>}
+                    <span className="tag" style={{marginLeft:'.4rem',fontSize:'.75rem'}}>{t.sens==='retour'?'retour':'aller'}</span>
                     <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s)</p>
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'.75rem'}}>
@@ -1321,8 +1424,18 @@
     const [note,setNote]             = useState(0);
     const [commentaire,setCommentaire] = useState('');
     const [msg,setMsg]   = useState('');
+    const [msgOk,setMsgOk] = useState(false);
     const [busy,setBusy] = useState(false);
-    useEffect(()=>{ api('historique.php').then(d=>setHistorique(d.historique||[])).finally(()=>setLoading(false)); },[]);
+    const reload = ()=>api('historique.php').then(d=>setHistorique(d.historique||[]));
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    async function annulerSejour(id){
+      if(!confirm('Annuler ce séjour ? Les disponibilités seront restituées.')) return;
+      setBusy(true); setMsg(''); setMsgOk(false);
+      try{
+        await api('annuler_sejour.php',{method:'POST',body:JSON.stringify({id_sejour:id})});
+        setMsg('Séjour annulé.'); setMsgOk(true); await reload();
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
+    }
     async function soumettreAvis(e){
       e.preventDefault(); if(!note)return; setBusy(true); setMsg('');
       try{
@@ -1338,8 +1451,8 @@
           <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
           <h1 className="detail-title">Mes voyages</h1>
         </div>
-        {msg&&<p className="msg-ok" style={{marginBottom:'1rem'}}>{msg}</p>}
-        {historique.length===0&&<p className="muted">Aucun séjour validé pour le moment.</p>}
+        {msg&&<p className={msgOk?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        {historique.length===0&&<p className="muted">Aucun séjour pour le moment.</p>}
         {historique.map(({sejour,hebergements,activites,transports})=>(
           <section key={sejour.id_sejour} className="detail-section">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
@@ -1347,7 +1460,10 @@
                 <h2 style={{margin:'0 0 .25rem'}}>{sejour.titre}</h2>
                 <p className="muted small">{fmtDate(sejour.date_creation)} · {Number(sejour.prix_total).toFixed(2)} €</p>
               </div>
-              <span className="tag tag-ok">validé</span>
+              <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
+                <span className="tag tag-ok">validé</span>
+                <button className="btn-ghost" style={{color:'#c0392b',fontSize:'.82rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>annulerSejour(sejour.id_sejour)}>Annuler</button>
+              </div>
             </div>
             {(hebergements||[]).map(h=>(
               <div key={h.id_hebergement} className="hist-item">
@@ -1377,7 +1493,7 @@
               <div key={i} className="hist-item">
                 <div>
                   <span className="hist-icon">{transportIcon(t.type)}</span>
-                  <div><strong>{t.ville_depart} → {t.destination}</strong> <span className="tag">{t.type}</span>
+                  <div><strong>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</strong> <span className="tag">{t.type}</span>
                     <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s) · {Number(t.prix).toFixed(0)} €</p>
                   </div>
                 </div>

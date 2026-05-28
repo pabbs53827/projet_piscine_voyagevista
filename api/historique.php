@@ -48,7 +48,7 @@ foreach ($sejours as $sejour) {
     $activites = $stmtA->fetchAll();
 
     $stmtT = $pdo->prepare(
-        'SELECT st.prix, st.nb_passagers,
+        'SELECT st.prix, st.nb_passagers, st.sens,
                 t.ville_depart, t.type, t.compagnie, t.date_depart, t.date_arrivee,
                 d.nom AS destination
          FROM sejour_transport st
