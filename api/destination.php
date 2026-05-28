@@ -24,8 +24,7 @@ if (!$destination) {
     json_error('Destination introuvable.', 404);
 }
 
-// Hébergements avec leur prochaine disponibilité ouverte.
-// La sous-requête évite un JOIN qui multiplierait les lignes.
+// Hébergements avec leur prochaine disponibilité ouverte et note moyenne.
 $stmt = $pdo->prepare(
     'SELECT h.*,
        (SELECT MIN(dp.date_debut)
@@ -33,7 +32,15 @@ $stmt = $pdo->prepare(
         WHERE dp.id_hebergement = h.id_hebergement
           AND dp.statut = "ouverte"
           AND dp.date_debut >= CURDATE()
-       ) AS prochaine_dispo
+       ) AS prochaine_dispo,
+       (SELECT ROUND(AVG(av.note),1)
+        FROM avis av
+        WHERE av.type_cible = "hebergement" AND av.id_cible = h.id_hebergement
+       ) AS avg_note,
+       (SELECT COUNT(*)
+        FROM avis av
+        WHERE av.type_cible = "hebergement" AND av.id_cible = h.id_hebergement
+       ) AS nb_avis
      FROM hebergement h
      WHERE h.id_destination = ?
      ORDER BY h.prix_semaine'
@@ -41,7 +48,7 @@ $stmt = $pdo->prepare(
 $stmt->execute([$id]);
 $hebergements = $stmt->fetchAll();
 
-// Activités avec leur prochain créneau disponible.
+// Activités avec leur prochain créneau disponible et note moyenne.
 $stmt = $pdo->prepare(
     'SELECT a.*,
        (SELECT MIN(c.date_heure)
@@ -49,7 +56,15 @@ $stmt = $pdo->prepare(
         WHERE c.id_activite = a.id_activite
           AND c.date_heure >= NOW()
           AND c.places_restantes > 0
-       ) AS prochain_creneau
+       ) AS prochain_creneau,
+       (SELECT ROUND(AVG(av.note),1)
+        FROM avis av
+        WHERE av.type_cible = "activite" AND av.id_cible = a.id_activite
+       ) AS avg_note,
+       (SELECT COUNT(*)
+        FROM avis av
+        WHERE av.type_cible = "activite" AND av.id_cible = a.id_activite
+       ) AS nb_avis
      FROM activite a
      WHERE a.id_destination = ?
      ORDER BY a.prix_personne'

@@ -238,3 +238,66 @@ html,body{height:100%;}
 .view-toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper);}
 .view-toggle button{font:inherit;cursor:pointer;padding:.38rem .85rem;border:none;background:transparent;color:var(--muted);font-size:.83rem;font-weight:500;transition:background .12s,color .12s;}
 .view-toggle button.active{background:var(--terra);color:#fff;}
+
+/* ── Transports ── */
+.tr-dates{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.5rem 0 .75rem;background:var(--sand);border-radius:8px;padding:.6rem .75rem;}
+.tr-dates>div{display:flex;flex-direction:column;gap:.1rem;}
+.tr-dates strong{font-size:.88rem;}
+.sens-row{display:flex;gap:.5rem;margin-bottom:.75rem;}
+.sens-btn{font:inherit;cursor:pointer;flex:1;padding:.45rem;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);font-size:.88rem;transition:all .12s;}
+.sens-btn.active{background:var(--forest);color:#fff;border-color:var(--forest);}
+
+/* ── Créneaux activité ── */
+.creneau-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.5rem;margin-bottom:.5rem;}
+.creneau-card{font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:.15rem;padding:.65rem .75rem;border:2px solid var(--line);border-radius:10px;background:var(--paper);text-align:left;transition:all .15s;}
+.creneau-card:hover{border-color:var(--terra);}
+.creneau-card.selected{border-color:var(--terra);background:var(--red-bg);}
+.creneau-date{font-size:.82rem;font-weight:600;color:var(--ink);}
+.creneau-time{font-size:1rem;font-weight:700;color:var(--terra);}
+.creneau-places{font-size:.75rem;color:var(--muted);}
+
+/* ── Autocomplete ── */
+.hero-search-wrap{position:relative;width:100%;max-width:560px;}
+.sug-dropdown{position:absolute;top:calc(100% + .4rem);left:0;right:0;z-index:200;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.13);}
+.sug-item{display:flex;flex-direction:column;gap:.15rem;width:100%;font:inherit;cursor:pointer;padding:.7rem 1rem;border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);text-align:left;}
+.sug-item:last-child{border-bottom:none;}
+.sug-item:hover{background:var(--sand);}
+.sug-item strong{font-size:.95rem;}
+.sug-item .muted{font-size:.8rem;}
+
+/* ── Étoiles ── */
+.star-rating{display:inline-flex;align-items:center;gap:2px;}
+.star{font-size:1.1rem;color:#e8a735;line-height:1;transition:transform .1s;}
+.star:hover{transform:scale(1.2);}
+.star-empty{color:#d6cfc5;}
+.star-val{font-size:.82rem;color:var(--muted);margin-left:.3rem;font-weight:500;}
+.card-stars{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;}
+
+/* ── Chronologie ── */
+.timeline-section .section-title{margin-bottom:1rem;}
+.timeline{display:flex;flex-direction:column;gap:0;padding-left:.75rem;}
+.timeline-item{display:flex;gap:1rem;align-items:flex-start;position:relative;padding-bottom:1.5rem;}
+.timeline-item:last-child{padding-bottom:0;}
+.timeline-item::before{content:'';position:absolute;left:-0.4rem;top:2rem;bottom:0;width:1px;background:var(--line);}
+.timeline-item:last-child::before{display:none;}
+.timeline-dot{font-size:1.2rem;line-height:1;flex-shrink:0;background:var(--paper);border:2px solid var(--line);border-radius:50%;width:2.1rem;height:2.1rem;display:grid;place-items:center;z-index:1;}
+.timeline-line{display:none;}
+.timeline-content{flex:1;padding-top:.1rem;}
+.timeline-date{font-size:.8rem;color:var(--muted);font-weight:500;margin:0 0 .15rem;text-transform:uppercase;letter-spacing:.04em;}
+.timeline-label{font-weight:600;margin:0 0 .1rem;font-size:.95rem;}
+
+/* ── Historique des voyages ── */
+.hist-item{display:flex;justify-content:space-between;align-items:flex-start;padding:.9rem 0;border-bottom:1px solid var(--line);}
+.hist-item:last-child{border-bottom:none;}
+.hist-item>div:first-child{display:flex;align-items:flex-start;gap:.75rem;}
+.hist-icon{font-size:1.3rem;margin-top:.15rem;flex-shrink:0;}
+.hist-rate-btn{font-size:.8rem;padding:.3rem .7rem;flex-shrink:0;margin-top:.1rem;}
+.tag-ok{background:var(--green-bg);color:#3a6b42;}
+
+/* ── Impression ── */
+@media print {
+  .no-print, .topbar, .sticky-topbar, .btn-back, .sejour-float, .modal-overlay { display:none!important; }
+  body { background:#fff!important; color:#000!important; }
+  .conf-card { box-shadow:none!important; border:1px solid #ccc!important; max-width:100%!important; }
+  .conf-page { display:block!important; padding:2rem; }
+}

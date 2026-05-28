@@ -84,6 +84,7 @@
                 <button onClick={()=>go('notifications')}>
                   Notifications {nbNotifs>0&&<span className="notif-badge">{nbNotifs}</span>}
                 </button>
+                <button onClick={()=>go('historique')}>Mes voyages</button>
                 <button onClick={()=>go('profil')}>Mon profil</button>
                 <button onClick={toggleDark}>{darkMode?'☀️ Mode clair':'🌙 Mode sombre'}</button>
                 <button className="menu-logout" onClick={()=>{onLogout();setMenuOpen(false);}}>Déconnexion</button>
@@ -123,6 +124,53 @@
       return ()=>{ el.innerHTML=''; };
     },[]);
     return <div ref={ref} style={{width:'100%',borderRadius:'var(--radius)',overflow:'hidden',background:document.documentElement.getAttribute('data-theme')==='dark'?'#0d1117':'#0a1628'}}/>;
+  }
+
+  /* ─ Étoiles de notation ─ */
+  function StarRating({value=0, max=5, onRate=null}) {
+    const [hover,setHover] = useState(0);
+    return (
+      <span className="star-rating">
+        {Array.from({length:max},(_,i)=>{
+          const s=i+1;
+          return <span key={s}
+            className={`star${s<=(hover||Math.round(value))?'':' star-empty'}`}
+            onClick={onRate?()=>onRate(s):undefined}
+            onMouseEnter={onRate?()=>setHover(s):undefined}
+            onMouseLeave={onRate?()=>setHover(0):undefined}
+            style={{cursor:onRate?'pointer':'default'}}>★</span>;
+        })}
+        {value>0&&!onRate&&<span className="star-val">{Number(value).toFixed(1)}</span>}
+      </span>
+    );
+  }
+
+  /* ─ Chronologie du séjour ─ */
+  function SejourTimeline({hebergements, activites, transports}) {
+    const events = [
+      ...(hebergements||[]).map(h=>({type:'heb',date:h.date_debut,endDate:h.date_fin,label:h.nom_hebergement,icon:'🏠'})),
+      ...(activites||[]).map(a=>({type:'act',date:a.date_heure,label:a.nom_activite,icon:'🎯'})),
+      ...(transports||[]).map(t=>({type:'tr',date:t.date_depart,label:`${t.ville_depart} → ${t.destination}`,icon:transportIcon(t.type)})),
+    ].filter(e=>e.date).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    if(!events.length) return null;
+    return (
+      <section className="detail-section timeline-section">
+        <h2 className="section-title">Chronologie</h2>
+        <div className="timeline">
+          {events.map((e,i)=>(
+            <div key={i} className="timeline-item">
+              <div className="timeline-dot">{e.icon}</div>
+              <div className="timeline-line"/>
+              <div className="timeline-content">
+                <p className="timeline-date">{e.type==='heb'?fmtDate(e.date):fmtDatetime(e.date)}</p>
+                <p className="timeline-label">{e.label}</p>
+                {e.endDate&&e.type==='heb'&&<p className="muted small">jusqu'au {fmtDate(e.endDate)}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
   }
 
   /* ─ Modale de confirmation ─ */
@@ -228,7 +276,15 @@
     const [view,setView] = useState('liste');
     const [loading,setLoading] = useState(true);
     const [error,setError]     = useState('');
+    const [suggestions,setSuggestions] = useState([]);
+    const sugRef = useRef(null);
+    const debRef = useRef(null);
     useEffect(()=>{ load(); },[]);
+    useEffect(()=>{
+      const h=e=>{if(sugRef.current&&!sugRef.current.contains(e.target))setSuggestions([]);};
+      document.addEventListener('mousedown',h);
+      return ()=>document.removeEventListener('mousedown',h);
+    },[]);
     async function load(overrides={}) {
       setLoading(true); setError('');
       const p=new URLSearchParams({q:overrides.q??q, pays:overrides.pays??pays, sort:overrides.sort??sort});
@@ -240,6 +296,16 @@
     }
     function handleSort(v){setSort(v);load({sort:v});}
     function handlePays(v){setPays(v);load({pays:v});}
+    function handleQ(e){
+      const v=e.target.value; setQ(v);
+      clearTimeout(debRef.current);
+      if(v.length<2){setSuggestions([]);return;}
+      debRef.current=setTimeout(async()=>{
+        const d=await api(`destinations.php?q=${encodeURIComponent(v)}`).catch(()=>null);
+        setSuggestions(d?.destinations?.slice(0,5)??[]);
+      },220);
+    }
+    function selectSug(d){setQ(d.nom);setSuggestions([]);load({q:d.nom});}
     return (
       <div className="catalogue-page">
         <section className="hero-section">
@@ -247,11 +313,22 @@
           <div className="hero-content">
             <img src="logo.png" alt="VoyageVista" className="hero-logo"/>
             <p className="hero-sub">Partez vraiment. Restez plus longtemps.<br/>Vivez là-bas comme un·e local·e.</p>
-            <form onSubmit={e=>{e.preventDefault();load();}} className="hero-search">
-              <span className="hero-search-icon">🔍</span>
-              <input type="text" placeholder="Destination, pays, région…" value={q} onChange={e=>setQ(e.target.value)}/>
-              <button type="submit" className="btn-hero">Rechercher</button>
-            </form>
+            <div className="hero-search-wrap" ref={sugRef}>
+              <form onSubmit={e=>{e.preventDefault();setSuggestions([]);load();}} className="hero-search">
+                <span className="hero-search-icon">🔍</span>
+                <input type="text" placeholder="Destination, pays, région…" value={q} onChange={handleQ} autoComplete="off"/>
+                <button type="submit" className="btn-hero">Rechercher</button>
+              </form>
+              {suggestions.length>0&&(
+                <div className="sug-dropdown">
+                  {suggestions.map(d=>(
+                    <button key={d.id_destination} className="sug-item" onClick={()=>selectSug(d)}>
+                      <strong>{d.nom}</strong><span className="muted small">{d.pays}{d.region?` · ${d.region}`:''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </section>
         <section className="howto-section">
@@ -355,6 +432,7 @@
     const [nbPass,setNbPass]     = useState(1);
     const [showTr,setShowTr]     = useState(null);
     const [sensTr,setSensTr]     = useState('aller');
+    const [trDateFilter,setTrDateFilter] = useState(()=>new Date().toISOString().split('T')[0]);
     const [msg,setMsg]     = useState('');
     const [msgOk,setMsgOk] = useState(false);
     const [busy,setBusy]   = useState(false);
@@ -493,37 +571,40 @@
           {/* Transports */}
           <section className="detail-section">
             <h2 className="section-title">Transports disponibles</h2>
-            {transports.length===0&&<p className="muted">Aucun transport disponible vers cette destination.</p>}
+            <div className="filter-bar" style={{marginBottom:'1rem'}}>
+              <label className="filter-item">
+                <span>Partir à partir du</span>
+                <input type="date" value={trDateFilter} onChange={e=>setTrDateFilter(e.target.value)} min={new Date().toISOString().split('T')[0]}/>
+              </label>
+            </div>
+            {transports.filter(t=>!trDateFilter||t.date_depart>=trDateFilter).length===0&&<p className="muted">Aucun transport disponible pour cette période.</p>}
             <div className="grid">
-              {transports.map(t=>(
+              {transports.filter(t=>!trDateFilter||t.date_depart>=trDateFilter).map(t=>(
                 <article key={t.id_transport} className="card tr-card">
                   <div className="card-tag-row">
                     <span className="tag">{transportIcon(t.type)} {t.type}</span>
                     {t.compagnie&&<span className="tag">{t.compagnie}</span>}
                   </div>
                   <h3 className="card-title">{t.ville_depart} → {destination.nom}</h3>
-                  <p className="muted small">Départ : {fmtDatetime(t.date_depart)}</p>
-                  <p className="muted small">Arrivée : {fmtDatetime(t.date_arrivee)}</p>
+                  <div className="tr-dates">
+                    <div><span className="muted small">Départ</span><strong>{fmtDatetime(t.date_depart)}</strong></div>
+                    <div><span className="muted small">Arrivée</span><strong>{fmtDatetime(t.date_arrivee)}</strong></div>
+                  </div>
                   <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
                   <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s)</p>
                   <button className="btn" style={{width:'100%'}} onClick={()=>{setShowTr(t.id_transport);setTrPick(t.id_transport);setNbPass(1);setSensTr('aller');setMsg('');}}>Réserver</button>
                   {showTr===t.id_transport&&(
                     <div className="booking-panel">
                       <div className="sens-row">
-                        <label className="sens-option">
-                          <input type="radio" name={`sens-${t.id_transport}`} value="aller" checked={sensTr==='aller'} onChange={()=>setSensTr('aller')}/>
-                          <span>✈ Aller</span>
-                        </label>
-                        <label className="sens-option">
-                          <input type="radio" name={`sens-${t.id_transport}`} value="retour" checked={sensTr==='retour'} onChange={()=>setSensTr('retour')}/>
-                          <span>✈ Retour</span>
-                        </label>
+                        <button className={`sens-btn${sensTr==='aller'?' active':''}`} onClick={()=>setSensTr('aller')}>✈ Aller</button>
+                        <button className={`sens-btn${sensTr==='retour'?' active':''}`} onClick={()=>setSensTr('retour')}>✈ Retour</button>
                       </div>
                       <label className="field" style={{marginBottom:'.75rem'}}>
                         <span>Passagers</span>
-                        <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'80px'}}/>
+                        <input type="number" min="1" max={t.places_dispo} value={nbPass} onChange={e=>setNbPass(Math.max(1,Math.min(t.places_dispo,parseInt(e.target.value)||1)))} style={{width:'90px'}}/>
+                        <span className="muted small" style={{marginLeft:'.5rem'}}>max {t.places_dispo}</span>
                       </label>
-                      <p className="muted small" style={{marginBottom:'.75rem'}}>Total : <strong>{(Number(t.prix)*nbPass).toFixed(0)} €</strong></p>
+                      <p className="prix-preview">Total : <strong>{(Number(t.prix)*nbPass).toFixed(0)} €</strong></p>
                       <div className="booking-actions">
                         <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
                         <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
@@ -553,6 +634,7 @@
                   {h.image_url&&<div className="heb-card-img"><img src={h.image_url} alt={h.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{h.type}</span><span className="dest-count">👥 {h.capacite}</span></div></div>}
                   <div className="heb-card-body">
                     <h3 className="card-title">{h.nom}</h3>
+                    {h.avg_note&&<div className="card-stars"><StarRating value={Number(h.avg_note)}/><span className="muted small">({h.nb_avis})</span></div>}
                     <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
                     <button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>
                     {hebSel?.id_hebergement===h.id_hebergement&&(
@@ -593,22 +675,32 @@
                   {a.image_url&&<div className="heb-card-img"><img src={a.image_url} alt={a.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{a.categorie}</span><span className="dest-count">{a.duree_h}h</span></div></div>}
                   <div className="heb-card-body">
                     <h3 className="card-title">{a.nom}</h3>
+                    {a.avg_note&&<div className="card-stars"><StarRating value={Number(a.avg_note)}/><span className="muted small">({a.nb_avis})</span></div>}
                     <p className="price-tag">{Number(a.prix_personne).toFixed(0)} € <span className="muted small">/ pers.</span></p>
                     {a.prochain_creneau?<p className="dispo-ok">✓ Prochain : {fmtDatetime(a.prochain_creneau)}</p>:<p className="dispo-none">Complet</p>}
                     {a.prochain_creneau&&<button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirAct(a)}>Ajouter</button>}
                     {actSel?.act.id_activite===a.id_activite&&(
                       <div className="booking-panel">
-                        <p className="booking-label">Choisissez un créneau :</p>
-                        {actSel.creneaux.map(cr=>(
-                          <label key={cr.id_creneau} className="picker-item">
-                            <input type="radio" name="creneau" checked={crenPick===cr.id_creneau} onChange={()=>setCrenPick(cr.id_creneau)}/>
-                            <span>{fmtDatetime(cr.date_heure)} — {cr.places_restantes} place(s)</span>
+                        <p className="booking-label">Choisissez une date :</p>
+                        {actSel.creneaux.length===0&&<p className="muted small">Aucun créneau disponible.</p>}
+                        <div className="creneau-grid">
+                          {actSel.creneaux.map(cr=>(
+                            <button key={cr.id_creneau}
+                              className={`creneau-card${crenPick===cr.id_creneau?' selected':''}`}
+                              onClick={()=>setCrenPick(cr.id_creneau)}>
+                              <span className="creneau-date">{fmtDate(cr.date_heure)}</span>
+                              <span className="creneau-time">{new Date(cr.date_heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>
+                              <span className="creneau-places">{cr.places_restantes} place{cr.places_restantes>1?'s':''}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {crenPick&&<>
+                          <label className="field" style={{marginTop:'.75rem'}}>
+                            <span>Participants</span>
+                            <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'90px'}}/>
                           </label>
-                        ))}
-                        <label className="field" style={{marginTop:'.5rem'}}>
-                          <span>Participants</span>
-                          <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'80px'}}/>
-                        </label>
+                          <p className="prix-preview">Total : <strong>{(Number(a.prix_personne)*nbPart).toFixed(0)} €</strong></p>
+                        </>}
                         <div className="booking-actions">
                           <button className="btn" disabled={busy||!crenPick} onClick={reserverAct}>{busy?'Ajout…':'Confirmer'}</button>
                           <button className="btn-ghost" onClick={()=>setActSel(null)}>Annuler</button>
@@ -790,6 +882,7 @@
               ))}
             </section>
           )}
+          <SejourTimeline hebergements={data.hebergements} activites={data.activites} transports={data.transports}/>
           <div className="total-row"><span>Total</span><span className="price-tag">{Number(data.total).toFixed(2)} €</span></div>
           {error&&<p className="error" style={{marginTop:'1rem'}}>{error}</p>}
           <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem',flexWrap:'wrap'}}>
@@ -804,7 +897,7 @@
   /* ─ Confirmation ─ */
   function Confirmation({infos,nav}){
     return (
-      <div className="screen-center">
+      <div className="screen-center conf-page">
         <div className="card conf-card">
           <div className="conf-check">✓</div>
           <h1 className="auth-title" style={{textAlign:'center'}}>Réservation confirmée !</h1>
@@ -815,7 +908,11 @@
           </div>
           <p className="price-tag" style={{textAlign:'center',marginTop:'1rem'}}>{Number(infos.montant).toFixed(2)} €</p>
           <p className="muted small" style={{textAlign:'center'}}>Paiement simulé — projet pédagogique.</p>
-          <button className="btn" style={{width:'100%',marginTop:'1.5rem'}} onClick={()=>nav('catalogue')}>Retour au catalogue</button>
+          <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem'}}>
+            <button className="btn" style={{flex:1}} onClick={()=>nav('catalogue')}>Retour au catalogue</button>
+            <button className="btn-ghost no-print" onClick={()=>nav('historique')}>Mes voyages</button>
+            <button className="btn-ghost no-print" onClick={()=>window.print()}>🖨 Imprimer</button>
+          </div>
         </div>
       </div>
     );
@@ -1216,6 +1313,102 @@
     );
   }
 
+  /* ─ Historique des séjours ─ */
+  function Historique({user,onLogout,nav,nbNotifs=0,nbItems=0}){
+    const [historique,setHistorique] = useState([]);
+    const [loading,setLoading]       = useState(true);
+    const [avisModal,setAvisModal]   = useState(null);
+    const [note,setNote]             = useState(0);
+    const [commentaire,setCommentaire] = useState('');
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+    useEffect(()=>{ api('historique.php').then(d=>setHistorique(d.historique||[])).finally(()=>setLoading(false)); },[]);
+    async function soumettreAvis(e){
+      e.preventDefault(); if(!note)return; setBusy(true); setMsg('');
+      try{
+        await api('avis.php',{method:'POST',body:JSON.stringify({type:avisModal.type,id_cible:avisModal.id_cible,note,commentaire})});
+        setMsg('Avis enregistré. Merci !'); setAvisModal(null); setNote(0); setCommentaire('');
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mes voyages</h1>
+        </div>
+        {msg&&<p className="msg-ok" style={{marginBottom:'1rem'}}>{msg}</p>}
+        {historique.length===0&&<p className="muted">Aucun séjour validé pour le moment.</p>}
+        {historique.map(({sejour,hebergements,activites,transports})=>(
+          <section key={sejour.id_sejour} className="detail-section">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+              <div>
+                <h2 style={{margin:'0 0 .25rem'}}>{sejour.titre}</h2>
+                <p className="muted small">{fmtDate(sejour.date_creation)} · {Number(sejour.prix_total).toFixed(2)} €</p>
+              </div>
+              <span className="tag tag-ok">validé</span>
+            </div>
+            {(hebergements||[]).map(h=>(
+              <div key={h.id_hebergement} className="hist-item">
+                <div>
+                  <span className="hist-icon">🏠</span>
+                  <div><strong>{h.nom_hebergement}</strong> <span className="tag">{h.type}</span>
+                    <p className="muted small">{h.nom_destination}, {h.pays}</p>
+                    <p className="muted small">{fmtDate(h.date_debut)} → {fmtDate(h.date_fin)} · {Number(h.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+                <button className="btn-ghost hist-rate-btn" onClick={()=>{setAvisModal({type:'hebergement',id_cible:h.id_hebergement,nom:h.nom_hebergement});setNote(0);setCommentaire('');setMsg('');}}>⭐ Évaluer</button>
+              </div>
+            ))}
+            {(activites||[]).map(a=>(
+              <div key={a.id_activite} className="hist-item">
+                <div>
+                  <span className="hist-icon">🎯</span>
+                  <div><strong>{a.nom_activite}</strong> <span className="tag">{a.categorie}</span>
+                    <p className="muted small">{a.nom_destination} · {fmtDatetime(a.date_heure)} · {a.nb_participants} pers.</p>
+                    <p className="muted small">{Number(a.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+                <button className="btn-ghost hist-rate-btn" onClick={()=>{setAvisModal({type:'activite',id_cible:a.id_activite,nom:a.nom_activite});setNote(0);setCommentaire('');setMsg('');}}>⭐ Évaluer</button>
+              </div>
+            ))}
+            {(transports||[]).map((t,i)=>(
+              <div key={i} className="hist-item">
+                <div>
+                  <span className="hist-icon">{transportIcon(t.type)}</span>
+                  <div><strong>{t.ville_depart} → {t.destination}</strong> <span className="tag">{t.type}</span>
+                    <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s) · {Number(t.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        ))}
+        {avisModal&&(
+          <div className="modal-overlay" onClick={()=>setAvisModal(null)}>
+            <div className="modal-card" onClick={e=>e.stopPropagation()}>
+              <h3 style={{marginBottom:'.5rem'}}>Évaluer</h3>
+              <p className="muted" style={{marginBottom:'1rem'}}>{avisModal.nom}</p>
+              <form onSubmit={soumettreAvis} className="form">
+                <div style={{marginBottom:'1rem'}}><StarRating value={note} onRate={setNote}/></div>
+                <label className="field">
+                  <span>Commentaire (facultatif)</span>
+                  <textarea value={commentaire} onChange={e=>setCommentaire(e.target.value)} rows="3" style={{resize:'vertical'}}/>
+                </label>
+                {msg&&<p className="error">{msg}</p>}
+                <div className="booking-actions">
+                  <button type="submit" className="btn" disabled={busy||!note}>{busy?'Envoi…':'Envoyer'}</button>
+                  <button type="button" className="btn-ghost" onClick={()=>setAvisModal(null)}>Annuler</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   /* ─ Application ─ */
   if(localStorage.getItem('darkMode')==='1') document.documentElement.setAttribute('data-theme','dark');
 
@@ -1252,6 +1445,7 @@
     if(vue==='panier')                return <Panier {...common}/>;
     if(vue==='notifications')         return <Notifications {...common}/>;
     if(vue==='profil')                return <Profil {...common}/>;
+    if(vue==='historique')            return <Historique {...common}/>;
     if(vue==='hote')                  return <HoteDashboard {...common}/>;
     if(vue==='admin')                 return <AdminDashboard {...common}/>;
     if(vue==='destination'&&vueData)  return <DestinationDetail {...common} destination={vueData}/>;
