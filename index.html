@@ -1445,11 +1445,13 @@
     const [avisModal,setAvisModal]   = useState(null);
     const [note,setNote]             = useState(0);
     const [commentaire,setCommentaire] = useState('');
-    const [msg,setMsg]   = useState('');
-    const [msgOk,setMsgOk] = useState(false);
-    const [busy,setBusy] = useState(false);
+    const [msg,setMsg]        = useState('');
+    const [msgOk,setMsgOk]   = useState(false);
+    const [busy,setBusy]     = useState(false);
+    const [printSejour,setPrintSejour] = useState(null);
     const reload = ()=>api('historique.php').then(d=>setHistorique(d.historique||[]));
     useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    useEffect(()=>{ if(printSejour) setTimeout(()=>{ window.print(); setPrintSejour(null); },120); },[printSejour]);
     async function annulerSejour(id){
       if(!confirm('Annuler ce séjour ? Les disponibilités seront restituées.')) return;
       setBusy(true); setMsg(''); setMsgOk(false);
