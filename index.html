@@ -1448,10 +1448,50 @@
     const [msg,setMsg]        = useState('');
     const [msgOk,setMsgOk]   = useState(false);
     const [busy,setBusy]     = useState(false);
-    const [printSejour,setPrintSejour] = useState(null);
     const reload = ()=>api('historique.php').then(d=>setHistorique(d.historique||[]));
     useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
-    useEffect(()=>{ if(printSejour) setTimeout(()=>{ window.print(); setPrintSejour(null); },120); },[printSejour]);
+    function lancerPDF({sejour,hebergements=[],activites=[],transports=[]}){
+      const row=(cells)=>`<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`;
+      const section=(titre,rows)=>rows.length===0?'':
+        `<h2>${titre}</h2><table><tbody>${rows.join('')}</tbody></table>`;
+      const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Itinéraire — ${sejour.titre}</title>
+<style>
+  body{font-family:Arial,sans-serif;padding:2.5rem;color:#333;max-width:780px;margin:0 auto}
+  h1{font-size:1.8rem;margin:0 0 .2rem}
+  .sub{color:#726b5e;margin:0 0 2rem}
+  .trip{font-size:1.2rem;font-weight:700;margin:0 0 .25rem}
+  .meta{color:#726b5e;font-size:.9rem;margin:0 0 1.5rem}
+  h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:#555;border-bottom:1px solid #ccc;padding-bottom:.3rem;margin:1.5rem 0 .5rem}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .footer{margin-top:2.5rem;font-size:.78rem;color:#aaa;text-align:center}
+</style></head><body>
+<div style="text-align:center;margin-bottom:2rem"><h1>VoyageVista</h1><p class="sub">Itinéraire de voyage</p></div>
+<p class="trip">${sejour.titre}</p>
+<p class="meta">Réservé le ${fmtDate(sejour.date_creation)} &middot; Total : ${Number(sejour.prix_total).toFixed(2)} €</p>
+${section('Transports', transports.map(t=>row([
+  t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`,
+  t.type, t.compagnie||'', fmtDatetime(t.date_depart),
+  `<span style="float:right">${Number(t.prix).toFixed(2)} €</span>`
+])))}
+${section('Hébergements', hebergements.map(h=>row([
+  h.nom_hebergement, h.type,
+  `${fmtDate(h.date_debut)} — ${fmtDate(h.date_fin)}`,
+  `<span style="float:right">${Number(h.prix).toFixed(2)} €</span>`
+])))}
+${section('Activités', activites.map(a=>row([
+  a.nom_activite, a.categorie, fmtDatetime(a.date_heure),
+  `<span style="float:right">${Number(a.prix).toFixed(2)} €</span>`
+])))}
+<p class="footer">Document généré par VoyageVista — Paiement simulé, projet pédagogique</p>
+</body></html>`;
+      const w=window.open('','_blank','width=820,height=700');
+      w.document.write(html);
+      w.document.close();
+      w.addEventListener('load',()=>{ w.focus(); w.print(); });
+    }
     async function annulerSejour(id){
       if(!confirm('Annuler ce séjour ? Les disponibilités seront restituées.')) return;
       setBusy(true); setMsg(''); setMsgOk(false);
@@ -1486,7 +1526,7 @@
               </div>
               <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
                 <span className="tag tag-ok">validé</span>
-                <button className="btn-ghost" style={{fontSize:'.82rem',padding:'.3rem .7rem'}} onClick={()=>setPrintSejour({sejour,hebergements,activites,transports})}>PDF</button>
+                <button className="btn-ghost" style={{fontSize:'.82rem',padding:'.3rem .7rem'}} onClick={()=>lancerPDF({sejour,hebergements,activites,transports})}>PDF</button>
                 <button className="btn-ghost" style={{color:'#c0392b',fontSize:'.82rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>annulerSejour(sejour.id_sejour)}>Annuler</button>
               </div>
             </div>
@@ -1526,27 +1566,6 @@
             ))}
           </section>
         ))}
-        {printSejour&&(
-          <div className="print-overlay">
-            <div style={{textAlign:'center',marginBottom:'2rem'}}>
-              <h1 style={{margin:'0 0 .25rem'}}>VoyageVista</h1>
-              <p style={{margin:0,color:'#726b5e'}}>Itinéraire de voyage</p>
-            </div>
-            <h2 style={{marginBottom:'.25rem'}}>{printSejour.sejour.titre}</h2>
-            <p style={{color:'#726b5e',marginBottom:'1.5rem'}}>Réservé le {fmtDate(printSejour.sejour.date_creation)} &middot; Total : {Number(printSejour.sejour.prix_total).toFixed(2)} €</p>
-            {(printSejour.transports||[]).length>0&&<><h3>Transports</h3><table className="pdf-table"><tbody>
-              {printSejour.transports.map((t,i)=><tr key={i}><td>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</td><td>{t.type}</td><td>{t.compagnie||''}</td><td>{fmtDatetime(t.date_depart)}</td><td style={{textAlign:'right'}}>{Number(t.prix).toFixed(2)} €</td></tr>)}
-            </tbody></table></>}
-            {(printSejour.hebergements||[]).length>0&&<><h3>Hébergements</h3><table className="pdf-table"><tbody>
-              {printSejour.hebergements.map((h,i)=><tr key={i}><td>{h.nom_hebergement}</td><td>{h.type}</td><td>{fmtDate(h.date_debut)} — {fmtDate(h.date_fin)}</td><td style={{textAlign:'right'}}>{Number(h.prix).toFixed(2)} €</td></tr>)}
-            </tbody></table></>}
-            {(printSejour.activites||[]).length>0&&<><h3>Activités</h3><table className="pdf-table"><tbody>
-              {printSejour.activites.map((a,i)=><tr key={i}><td>{a.nom_activite}</td><td>{a.categorie}</td><td>{fmtDatetime(a.date_heure)}</td><td style={{textAlign:'right'}}>{Number(a.prix).toFixed(2)} €</td></tr>)}
-            </tbody></table></>}
-            <SejourTimeline hebergements={printSejour.hebergements} activites={printSejour.activites} transports={printSejour.transports}/>
-            <p style={{marginTop:'2rem',fontSize:'.8rem',color:'#726b5e',textAlign:'center'}}>Document généré par VoyageVista &mdash; Paiement simulé, projet pédagogique</p>
-          </div>
-        )}
         {avisModal&&(
           <div className="modal-overlay" onClick={()=>setAvisModal(null)}>
             <div className="modal-card" onClick={e=>e.stopPropagation()}>
@@ -1605,6 +1624,8 @@
     async function login(email,mot_de_passe){
       const d=await api('login.php',{method:'POST',body:JSON.stringify({email,mot_de_passe})});
       setUser(d.user);
+      if(d.user.role==='hote')  setVue('hote');
+      if(d.user.role==='admin') setVue('admin');
     }
     async function logout(){
       await api('logout.php',{method:'POST'});
@@ -1617,12 +1638,13 @@
 
     const common={user,onLogout:logout,nav,nbNotifs,nbItems,fmtCur,currency,changeCurrency};
     if(vue==='confirmation'&&vueData) return <Confirmation infos={vueData} nav={nav}/>;
-    if(vue==='panier')                return <Panier {...common}/>;
     if(vue==='notifications')         return <Notifications {...common}/>;
     if(vue==='profil')                return <Profil {...common}/>;
-    if(vue==='historique')            return <Historique {...common}/>;
     if(vue==='hote')                  return <HoteDashboard {...common}/>;
     if(vue==='admin')                 return <AdminDashboard {...common}/>;
+    if(user.role==='hote')            return <HoteDashboard {...common}/>;
+    if(vue==='panier')                return <Panier {...common}/>;
+    if(vue==='historique')            return <Historique {...common}/>;
     if(vue==='destination'&&vueData)  return <DestinationDetail {...common} destination={vueData}/>;
     return <Catalogue {...common}/>;
   }
