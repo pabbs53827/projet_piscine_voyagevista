@@ -434,7 +434,7 @@
   }
 
   /* ─ Détail destination ─ */
-  function DestinationDetail({destination,user,onLogout,nav,nbNotifs,nbItems=0}) {
+  function DestinationDetail({destination,user,onLogout,nav,nbNotifs,nbItems=0,fmtCur=null,currency='EUR',changeCurrency=null}) {
     const [data,setData]         = useState(null);
     const [loading,setLoading]   = useState(true);
     const [sejourId,setSejourId] = useState(null);
