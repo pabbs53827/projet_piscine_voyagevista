@@ -6,7 +6,7 @@ require __DIR__ . '/_helpers.php';
 require __DIR__ . '/_db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    json_error('Méthode non autorisée.', 405);
+    json_error('Méthode non autorisée.', 405); 
 }
 
 $idDest    = isset($_GET['destination']) ? (int)$_GET['destination']    : 0;
