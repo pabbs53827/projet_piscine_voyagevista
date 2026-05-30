@@ -1,4 +1,4 @@
-INSERT INTO hebergement (nom, type, capacite, prix_semaine, duree_min_nuits, id_destination, image_url, id_hote) VALUES
+INSERT INTO hebergement (nom, type, capacite, prix_semaine, duree_min_nuits, id_destination, image_url, id_hote) VALUES 
 ('Canal House Jordaan', 'maison', 4, 1890.00, 7, 1, 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&q=80', 2),
 ('Appartement Vue Canal', 'appartement', 2, 1260.00, 7, 1, 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80', 3),
 ('Studio De Pijp Design', 'appartement', 2, 980.00, 7, 1, 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80', 4),
