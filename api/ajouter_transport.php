@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // POST { id_sejour, id_transport, sens, date_depart, date_arrivee, nb_passagers }
-// aller  : utilise le transport existant, décrémente places_dispo
+// aller  : utilise le transport existant, décrémente places_dispo 
 // retour : crée un transport à la volée (même route inversée)
 require __DIR__ . '/_helpers.php';
 require __DIR__ . '/_db.php';
