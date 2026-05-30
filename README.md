@@ -1,6 +1,6 @@
 # VoyageVista — Instructions d'installation
 
-Projet pédagogique ECE ING2 — application web de réservation de voyages lents.
+Projet pédagogique ECE ING2 — application web de réservation de voyages lents. 
 
 ## Prérequis
 
