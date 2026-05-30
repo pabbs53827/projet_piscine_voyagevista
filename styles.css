@@ -5,7 +5,7 @@
 }
 [data-theme="dark"] {
   --sand:#1a1916; --paper:#23221e; --ink:#ede8df; --muted:#9c9280; --line:#3c3930;
-  --green-bg:#1a2b1c; --red-bg:#2b1a18;
+  --green-bg:#1a2b1c; --red-bg:#2b1a18; 
 }
 *{box-sizing:border-box;}
 body{margin:0;background:var(--sand);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;transition:background-color .2s,color .2s;}
