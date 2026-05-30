@@ -8,7 +8,7 @@ $user = require_auth();
 $body = read_json_body();
 $id   = (int)($body['id_sejour'] ?? 0);
 if ($id <= 0) json_error('Identifiant manquant.');
-
+ 
 $pdo = db();
 $pdo->beginTransaction();
 
