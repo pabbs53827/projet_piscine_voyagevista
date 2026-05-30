@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-
+ 
 // http://localhost/voyagevista/api/destination.php?id=1  (GET)
 require __DIR__ . '/_helpers.php';
 require __DIR__ . '/_db.php';
