@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS `activite`; 
+DROP TABLE IF EXISTS `activite`;
 CREATE TABLE `activite` (
   `id_activite` int NOT NULL AUTO_INCREMENT,
   `id_destination` int NOT NULL,
