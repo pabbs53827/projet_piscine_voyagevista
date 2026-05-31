@@ -67,10 +67,7 @@ Tous les comptes ont le mot de passe : **`password`**
 |-------|------|-------------|
 | `admin@voyagevista.fr` | Admin | Accès complet |
 | `ahmet@voyagevista.fr` | Hôte | Istanbul, Dubaï, Marrakech, Zanzibar |
-| `ana@voyagevista.fr` | Hôte | Amérique latine |
-| `kenji@voyagevista.fr` | Hôte | Asie |
-| `fatima@voyagevista.fr` | Hôte | Europe |
-| `lucas@example.com` | Voyageur | Compte voyageur de test |
+| `ptellezdeita@gmail.com` | Voyageur | Compte voyageur de test |
 
 Il est également possible de créer un nouveau compte voyageur ou hôte via le formulaire d'inscription.
 
