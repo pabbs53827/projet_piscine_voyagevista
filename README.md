@@ -1,253 +1,114 @@
-# 🌴 VoyageVista - Plateforme de Planification de Voyages Premium
+# VoyageVista — Instructions d'installation
 
-Une plateforme web moderne et élégante pour la planification et la réservation de voyages. Découvrez des destinations exotiques, des expériences uniques et planifiez votre séjour de rêve.
+Projet pédagogique ECE ING2 
 
-## ✨ Caractéristiques
+## Prérequis
 
-### Design & UX
-- 🎨 **Palette couleur premium** : Beige sable, orange sunset, bleu lagon doux
-- 📱 **Responsive Design** : Optimisé pour mobile, tablette et desktop
-- ✨ **Animations fluides** : Scroll reveal, hover effects, transitions douces
-- 🎭 **Glassmorphism** : Éléments modernes avec effet verre translucide
-- 🌙 **Dark overlay** : Améliore la lisibilité sur les sections hero
-
-### Fonctionnalités
-- 🔍 **Barre de recherche intelligente** : Destination, dates, nombre de voyageurs
-- 🏖️ **Catalogue de destinations** : Plus de 150 destinations populaires
-- ⭐ **Système de notation** : Avis des voyageurs avec étoiles
-- 🎯 **Expériences curatées** : Plongée, surf, trekking et bien plus
-- 📊 **Statistiques animées** : Compteurs dynamiques
-- 💬 **Témoignages** : Avis authentiques des clients
-- 📧 **Newsletter** : Inscription pour les offres exclusives
-- 📞 **Support 24/7** : Service client premium
-
-### Technique
-- 🌐 **HTML5 sémantique** : Structure propre et accessible
-- 🎨 **CSS moderne** : Variables CSS, Flexbox, Grid, animations natives
-- ⚡ **JavaScript vanilla** : Pas de dépendances lourdes
-- 🚀 **XAMPP/WAMP compatible** : PHP includes réutilisables
-- ♿ **Accessibilité** : Keyboard navigation, ARIA labels
-- 📈 **Performance** : Optimisé pour les mobiles, lazy loading
-
-## 📁 Structure du Projet
-
-```
-voyagevista/
-├── index.php                 # Page d'accueil principale
-├── css/
-│   └── style.css            # Styles complets avec variables CSS
-├── js/
-│   └── app.js               # Interactivité et animations
-├── includes/
-│   ├── header.php           # Navbar réutilisable
-│   └── footer.php           # Footer réutilisable
-├── assets/
-│   ├── images/              # Photos et illustrations
-│   └── icons/               # SVG et icônes
-├── config.php               # Configuration (DB, constantes)
-└── README.md               # Cette documentation
-```
-
-## 🚀 Installation & Utilisation
-
-### Prérequis
-- **XAMPP** ou **WAMP** (ou tout serveur PHP)
-- PHP 7.4+
-- Navigateur moderne
-
-### Installation rapide
-
-1. **Cloner/Télécharger le projet**
-   ```bash
-   git clone https://github.com/utilisateur/voyagevista.git
-   cd voyagevista
-   ```
-
-2. **Placer dans le dossier htdocs**
-   ```bash
-   cp -r voyagevista /path/to/xampp/htdocs/
-   ```
-
-3. **Lancer XAMPP**
-   - Démarrer Apache
-   - Ouvrir http://localhost/voyagevista/
-
-4. **C'est tout !** 🎉
-   La page fonctionne sans configuration supplémentaire
-
-## 🎨 Palette Couleur
-
-| Couleur | Code Hex | Usage |
-|---------|----------|-------|
-| **Beige Sable** | `#F5E6D3` | Backgrounds, accents |
-| **Orange Sunset** | `#FF9F43` | Boutons, CTA, highlights |
-| **Bleu Lagon** | `#2E9CCA` | Secondaire, hover states |
-| **Corail Doux** | `#F17B5D` | Accents, subtle highlights |
-| **Blanc Cassé** | `#FAFAFA` | Arrière-plan principal |
-| **Doré Léger** | `#D4A574` | Détails premium |
-| **Gris** | `#757575` | Texte secondaire |
-
-## 📱 Responsive Breakpoints
-
-- 📱 **Mobile** : < 768px
-- 📱 **Tablet** : 768px - 1024px
-- 💻 **Desktop** : 1024px+
-
-Tous les éléments s'adaptent automatiquement pour une expérience optimale sur tous les appareils.
-
-## 🎯 Sections Principales
-
-### 1. Hero Section
-- Grand titre impactant avec parallax effect
-- Sous-titre inspirant
-- Barre de recherche avec glassmorphism
-- Boutons CTA
-- Dark overlay pour meilleure lisibilité
-
-### 2. Statistiques Animées
-- Compteurs dynamiques
-- 50,000+ voyageurs heureux
-- 150+ destinations
-- 500+ hébergements
-- 1,000+ expériences
-
-### 3. Destinations Populaires
-- Cartes élégantes avec hover effects
-- Images, prix, étoiles de notation
-- Tags de caractéristiques
-- Boutons "Détails" et "Réserver"
-- Carrousel navigation
-
-### 4. Pourquoi Choisir VoyageVista
-- 4 avantages clés avec icônes
-- Réservations sécurisées
-- Meilleurs prix garantis
-- 150+ destinations
-- Support 24/7
-
-### 5. Expériences Uniques
-- Plongée sous-marine
-- Surf & sports d'eau
-- Trekking & randonnée
-- Cartes avec hover effects
-- Liens vers chaque expérience
-
-### 6. Témoignages
-- Avis de 3 clients
-- Notation avec étoiles
-- Avatars initiales
-- Texte authentique
-
-### 7. Newsletter
-- Formulaire d'inscription
-- Validation email
-- Feedback utilisateur
-
-### 8. Footer Premium
-- 4 sections d'informations
-- Liens sociaux
-- Mentions légales
-- Copyright
-
-## 🔧 Customisation
-
-### Changer les couleurs
-Modifiez les variables CSS en haut de `css/style.css` :
-
-```css
-:root {
-  --color-orange: #FF9F43;      /* Couleur primaire */
-  --color-blue: #2E9CCA;        /* Couleur secondaire */
-  /* ... autres variables */
-}
-```
-
-### Ajouter des destinations
-Dupliquez une `.destination-card` dans `index.php` et modifiez :
-
-```html
-<div class="destination-card">
-  <div class="destination-image">🏝️</div>
-  <div class="destination-info">
-    <!-- Modifier ici -->
-  </div>
-</div>
-```
-
-### Ajouter des pages
-1. Créez `page.php` dans le dossier racine
-2. Importez le header : `<?php include 'includes/header.php'; ?>`
-3. Importez le footer : `<?php include 'includes/footer.php'; ?>`
-
-## 📊 Performance
-
-- ⚡ **Chargement rapide** : Optimisé pour mobiles
-- 🎯 **Lazy loading** : Images chargées à la demande
-- 📦 **Pas de dépendances externes** : CSS et JS vanilla
-- 🔍 **SEO friendly** : Meta tags, structure sémantique
-
-## ♿ Accessibilité
-
-- ⌨️ Keyboard navigation complète
-- 🎤 Screen reader friendly
-- 🎯 ARIA labels sur les boutons
-- 📝 Contraste suffisant (WCAG AA)
-
-## 🐛 Troubleshooting
-
-### Les styles ne s'appliquent pas
-- Vérifiez que `css/style.css` est dans le dossier `css/`
-- Nettoyez le cache du navigateur (Ctrl+Maj+Suppr)
-
-### Les scripts ne fonctionnent pas
-- Ouvrez la console du navigateur (F12)
-- Vérifiez qu'il n'y a pas d'erreurs
-- Vérifiez que `js/app.js` est présent
-
-### PHP n'est pas chargé
-- Assurez-vous que Apache et PHP sont activés dans XAMPP
-- Vérifiez l'URL : http://localhost/voyagevista/index.php
-
-## 🚀 Prochaines Étapes
-
-### À développer
-- [ ] Système de connexion utilisateur
-- [ ] Base de données (destinations, réservations)
-- [ ] Intégration de paiement (Stripe)
-- [ ] Page de détails destination
-- [ ] Panier et réservation
-- [ ] Système de notation/commentaires
-- [ ] Admin dashboard
-- [ ] Notifications email
-- [ ] Mobile app
-
-### Améliorations possibles
-- Multlangue (i18n)
-- Filtre par budget, note, type d'activité
-- Map interactive
-- Calendrier des prix
-- Comparaison d'hôtels
-- Blog travel
-- Live chat support
-
-## 📄 Licence
-
-Ce projet est sous licence MIT. Libre d'utilisation pour projets personnels et scolaires.
-
-## 👨‍💻 Développé par
-
-**VoyageVista Dev Team**
-- Plateforme de voyage premium
-- Conception & développement : 2026
-- Version initiale : 1.0
-
-## 📧 Contact & Support
-
-- 📧 Email : info@voyagevista.com
-- 📱 Téléphone : +33 1 23 45 67 89
-- 🌐 Website : www.voyagevista.com
-- 💬 Support 24/7 disponible
+- **MAMP** (macOS) ou **WAMP/XAMPP** (Windows) avec :
+  - PHP 8.0+
+  - MySQL 8.0+
+- Navigateur moderne (Chrome, Firefox, Safari, Edge)
+- Connexion Internet (React, Babel et l'API de devises sont chargés via CDN)
 
 ---
 
-**Made with ❤️ for travel lovers** ✈️🌴☀️
+## Installation en 4 étapes
+
+### 1. Copier les fichiers
+
+Placez le dossier `voyagevista/` dans le répertoire racine du serveur :
+
+| Environnement | Chemin |
+|---------------|--------|
+| MAMP (macOS)  | `/Applications/MAMP/htdocs/voyagevista/` |
+| WAMP (Windows)| `C:\wamp64\www\voyagevista\` |
+| XAMPP         | `C:\xampp\htdocs\voyagevista\` |
+
+### 2. Configurer la base de données
+
+Dans MAMP / phpMyAdmin :
+
+1. Créer une base de données nommée `voyagevista` (encodage `utf8mb4_unicode_ci`)
+2. Importer **dans cet ordre** :
+   - `schema.sql` — crée toutes les tables et contraintes
+   - `seed_data.sql` — insère les données de démonstration
+
+### 3. Configurer la connexion PHP
+
+Copier `api/config.example.php` en `api/config.php` et adapter les valeurs :
+
+```php
+return [
+    'host'     => '127.0.0.1',
+    'port'     => 8889,        // MAMP : 8889 | WAMP/XAMPP : 3306
+    'dbname'   => 'voyagevista',
+    'user'     => 'root',
+    'password' => 'root',      // MAMP : 'root' | WAMP : '' | XAMPP : ''
+];
+```
+
+### 4. Lancer l'application
+
+Démarrer les serveurs Apache et MySQL dans MAMP, puis ouvrir :
+
+```
+http://localhost:8888/voyagevista/
+```
+
+*(WAMP/XAMPP : `http://localhost/voyagevista/`)*
+
+---
+
+## Comptes de démonstration
+
+Tous les comptes ont le mot de passe : **`password`**
+
+| Email | Rôle | Description |
+|-------|------|-------------|
+| `admin@voyagevista.fr` | Admin | Accès complet |
+| `ahmet@voyagevista.fr` | Hôte | Istanbul, Dubaï, Marrakech, Zanzibar |
+| `ptellezdeita@gmail.com` | Voyageur | Compte voyageur de test |
+
+Il est également possible de créer un nouveau compte voyageur ou hôte via le formulaire d'inscription.
+
+---
+
+## Structure du projet
+
+```
+voyagevista/
+├── index.html          # Application SPA (React 18 + Babel, sans build)
+├── styles.css          # Feuille de styles
+├── logo.png            # Logo
+├── schema.sql          # Schéma de la base de données
+├── seed_data.sql       # Données de démonstration
+└── api/
+    ├── config.php          # Configuration BDD (à créer, voir config.example.php)
+    ├── config.example.php  # Modèle de configuration
+    ├── _db.php             # Connexion PDO
+    ├── _helpers.php        # Fonctions utilitaires (auth, JSON, etc.)
+    └── *.php               # Endpoints REST
+```
+
+## Dépendances
+
+Toutes chargées via CDN — **aucune installation npm requise** :
+
+- React 18 + ReactDOM
+- Babel Standalone (transpilation JSX côté client)
+- @fawazahmed0/currency-api (conversion de devises)
+
+---
+
+## Fonctionnalités principales
+
+- Catalogue de destinations avec filtres et favoris
+- Réservation progressive : transport aller → transport retour → hébergement → activités
+- Panier de séjour avec calcul du prix total
+- Paiement simulé et confirmation
+- Historique des voyages avec génération PDF d'itinéraire
+- Annulation de séjour validé
+- Conversion de devises en temps réel (€ / $ / £ / ¥)
+- Espace hôte : gestion des hébergements, activités et disponibilités
+- Espace admin : gestion des utilisateurs, destinations et transports
+- Système de notifications et d'évaluations

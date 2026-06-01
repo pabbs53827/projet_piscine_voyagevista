@@ -1,466 +1,1655 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="VoyageVista - Planifiez vos voyages et séjours de rêve.">
-  <title>VoyageVista - Planifiez Vos Voyages de Rêve</title>
-
-  <!-- Polices Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Feuille de style -->
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VoyageVista</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🌿</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
 </head>
 <body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
 
-  <!-- navigation -->
-  <header>
-    <nav class="navbar">
+  /* ─ API ─ */
+  const API = 'api';
+  async function api(path, options = {}) {
+    const res = await fetch(`${API}/${path}`, {
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(options.headers||{}) },
+      ...options,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+    return data;
+  }
 
+  /* ─ Helpers ─ */
+  const fmtDate = iso => !iso ? '—' : new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const fmtDatetime = iso => !iso ? '—' : new Date(iso).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  function destEmoji(pays='',region='') {
+    const p=(pays||'').toLowerCase(), r=(region||'').toLowerCase();
+    if(p.includes('japon'))return'🏯'; if(p.includes('thaïlande')||p.includes('thai'))return'🌸';
+    if(p.includes('portugal'))return'🌊'; if(p.includes('mexique'))return'🌵';
+    if(p.includes('indonés'))return'🌺'; if(p.includes('grèce'))return'🏛️';
+    if(p.includes('géorgie'))return'🏔️'; if(r.includes('nord'))return'🌲';
+    return'🌍';
+  }
+  const transportIcon = t => ({avion:'✈️',train:'🚂',bus:'🚌',ferry:'⛴️'}[t]||'🚗');
 
-      <a href="index.html" class="logo">✈️ VoyageVista</a>
-
-
-      <div class="menu-toggle">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-
-      <ul class="nav-menu">
-        <li><a href="index.html" class="nav-link active">Accueil</a></li>
-        <li><a href="destinations.html" class="nav-link">Destinations</a></li>
-        <li><a href="#experiences" class="nav-link">Expériences</a></li>
-        <li><a href="contact.html" class="nav-link">Contact</a></li>
-      </ul>
-
-
-      <div class="nav-auth">
-        <button class="btn btn-outline" onclick="alert('Fonctionnalité de connexion à développer')">Connexion</button>
-        <button class="btn btn-primary" onclick="alert('Fonctionnalité d\'inscription à développer')">Inscription</button>
-      </div>
-
-    </nav>
-  </header>
-
-  <main>
-
-    <section class="hero">
-      <div class="hero-overlay"></div>
-      <div class="hero-content">
-
-        <h1>Explorez le Monde avec VoyageVista</h1>
-        <p>Découvrez les destinations les plus époustouflantes et créez des souvenirs inoubliables</p>
-
-
-        <form class="search-bar">
-          <input type="text" placeholder="Destination, hôtel ou aéroport" required>
-          <input type="date" required>
-          <input type="date" required>
-          <select required>
-            <option value="">Voyageurs</option>
-            <option value="1">1 Personne</option>
-            <option value="2">2 Personnes</option>
-            <option value="3">3-4 Personnes</option>
-            <option value="5">5+ Personnes</option>
-          </select>
-          <button type="submit" class="btn btn-primary">Rechercher</button>
-        </form>
-
-
-        <div class="hero-cta">
-          <button class="btn btn-primary btn-large"
-            onclick="document.querySelector('#destinations').scrollIntoView({behavior: 'smooth'})">
-            Découvrir les Destinations
-          </button>
-          <button class="btn btn-outline btn-large"
-            onclick="alert('Vidéo de présentation bientôt disponible !')">
-            🎬 Voir la Vidéo
-          </button>
+  /* ─ Topbar ─ */
+  function Topbar({user,onLogout,nav,nbNotifs=0,nbItems=0,variant,currency='EUR',changeCurrency=null}) {
+    const [menuOpen,setMenuOpen] = useState(false);
+    const [darkMode,setDarkMode] = useState(()=>document.documentElement.getAttribute('data-theme')==='dark');
+    const menuRef = useRef(null);
+    const dark = variant==='dark';
+    function toggleDark(){
+      const next=!darkMode; setDarkMode(next);
+      document.documentElement.setAttribute('data-theme',next?'dark':'');
+      localStorage.setItem('darkMode',next?'1':'0');
+    }
+    useEffect(()=>{
+      if(!menuOpen) return;
+      const handle = e => { if(menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+      document.addEventListener('mousedown', handle);
+      return ()=>document.removeEventListener('mousedown', handle);
+    },[menuOpen]);
+    function go(v){ nav(v); setMenuOpen(false); }
+    return (
+      <header className={`topbar${dark?' topbar-dark':''}`}>
+        <p className="brand" onClick={()=>nav('catalogue')} style={{cursor:'pointer'}}>VoyageVista</p>
+        <div className="topbar-right" ref={menuRef}>
+          {user && <>
+            {changeCurrency&&<select className="currency-select" value={currency} onChange={e=>changeCurrency(e.target.value)}>
+              <option value="EUR">€ EUR</option>
+              <option value="USD">$ USD</option>
+              <option value="GBP">£ GBP</option>
+              <option value="JPY">¥ JPY</option>
+            </select>}
+            <span className={dark?'topbar-muted':'muted'}>Bonjour, {user.prenom}</span>
+            <button className={`btn-hamburger${dark?' btn-hamburger-dark':''}`}
+              onClick={()=>setMenuOpen(o=>!o)} aria-label="Menu">
+              <span>{menuOpen?'✕':'☰'}</span>
+              {(nbNotifs>0||nbItems>0)&&!menuOpen&&<span className="hamburger-dot"/>}
+            </button>
+            {menuOpen&&(
+              <div className="topbar-menu">
+                {user.role==='hote'  && <button onClick={()=>go('hote')}>Espace hôte</button>}
+                {user.role==='admin' && <button onClick={()=>go('admin')}>Espace admin</button>}
+                <button onClick={()=>go('panier')}>
+                  Mon séjour {nbItems>0&&<span className="notif-badge">{nbItems}</span>}
+                </button>
+                <button onClick={()=>go('notifications')}>
+                  Notifications {nbNotifs>0&&<span className="notif-badge">{nbNotifs}</span>}
+                </button>
+                <button onClick={()=>go('historique')}>Mes voyages</button>
+                <button onClick={()=>go('profil')}>Mon profil</button>
+                <button onClick={toggleDark}>{darkMode?'☀️ Mode clair':'🌙 Mode sombre'}</button>
+                <button className="menu-logout" onClick={()=>{onLogout();setMenuOpen(false);}}>Déconnexion</button>
+              </div>
+            )}
+          </>}
         </div>
+      </header>
+    );
+  }
 
-      </div>
-    </section>
+  /* ─ Globe 3D ─ */
+  function GlobeView({destinations, nav}) {
+    const ref = useRef(null);
+    useEffect(()=>{
+      if(!ref.current || !window.Globe) return;
+      const el = ref.current;
+      const w = el.offsetWidth || 800;
+      const h = Math.min(Math.round(w * 0.58), 540);
+      const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+      const g = window.Globe()
+        .width(w).height(h)
+        .backgroundColor('rgba(0,0,0,0)')
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+        .atmosphereColor(isDark?'#4a7a8a':'#6ab0c8')
+        .atmosphereAltitude(0.15)
+        .pointsData(destinations.filter(d=>d.latitude&&d.longitude))
+        .pointLat('latitude').pointLng('longitude')
+        .pointColor(()=>'#b5613b').pointRadius(.45).pointAltitude(.025)
+        .pointLabel(d=>`<div style="font:600 13px/1.4 sans-serif;padding:6px 10px;background:rgba(20,18,14,.85);color:#faf6ef;border-radius:8px;border:1px solid rgba(255,255,255,.15)">${d.nom}<br/><span style="font-weight:400;opacity:.7;font-size:11px">${d.pays}</span></div>`)
+        .onPointClick(d=>nav('destination',d))
+        (el);
+      g.controls().autoRotate = true;
+      g.controls().autoRotateSpeed = 0.6;
+      g.pointOfView({altitude:2.2});
+      return ()=>{ el.innerHTML=''; };
+    },[]);
+    return <div ref={ref} style={{width:'100%',borderRadius:'var(--radius)',overflow:'hidden',background:document.documentElement.getAttribute('data-theme')==='dark'?'#0d1117':'#0a1628'}}/>;
+  }
 
-    <section class="stats">
-      <div class="stats-container">
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-number" data-target="50000">0</div>
-            <div class="stat-label">Voyageurs Heureux</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="150">0</div>
-            <div class="stat-label">Destinations</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="500">0</div>
-            <div class="stat-label">Hôtels & Hébergements</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="1000">0</div>
-            <div class="stat-label">Expériences Uniques</div>
+  /* ─ Étoiles de notation ─ */
+  function StarRating({value=0, max=5, onRate=null}) {
+    const [hover,setHover] = useState(0);
+    return (
+      <span className="star-rating">
+        {Array.from({length:max},(_,i)=>{
+          const s=i+1;
+          return <span key={s}
+            className={`star${s<=(hover||Math.round(value))?'':' star-empty'}`}
+            onClick={onRate?()=>onRate(s):undefined}
+            onMouseEnter={onRate?()=>setHover(s):undefined}
+            onMouseLeave={onRate?()=>setHover(0):undefined}
+            style={{cursor:onRate?'pointer':'default'}}>★</span>;
+        })}
+        {value>0&&!onRate&&<span className="star-val">{Number(value).toFixed(1)}</span>}
+      </span>
+    );
+  }
+
+  /* ─ Chronologie du séjour ─ */
+  function SejourTimeline({hebergements, activites, transports}) {
+    const events = [
+      ...(hebergements||[]).map(h=>({type:'heb',date:h.date_debut,endDate:h.date_fin,label:h.nom_hebergement,icon:'🏠'})),
+      ...(activites||[]).map(a=>({type:'act',date:a.date_heure,label:a.nom_activite,icon:'🎯'})),
+      ...(transports||[]).map(t=>({type:'tr',date:t.date_depart,label:t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`,icon:transportIcon(t.type)})),
+    ].filter(e=>e.date).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    if(!events.length) return null;
+    return (
+      <section className="detail-section timeline-section">
+        <h2 className="section-title">Chronologie</h2>
+        <div className="timeline">
+          {events.map((e,i)=>(
+            <div key={i} className="timeline-item">
+              <div className="timeline-dot">{e.icon}</div>
+              <div className="timeline-line"/>
+              <div className="timeline-content">
+                <p className="timeline-date">{e.type==='heb'?fmtDate(e.date):fmtDatetime(e.date)}</p>
+                <p className="timeline-label">{e.label}</p>
+                {e.endDate&&e.type==='heb'&&<p className="muted small">jusqu'au {fmtDate(e.endDate)}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  /* ─ Modale de confirmation ─ */
+  function ConfirmModal({msg, onOk, onCancel}) {
+    return (
+      <div className="modal-overlay" onClick={onCancel}>
+        <div className="modal-card" onClick={e=>e.stopPropagation()}>
+          <p className="modal-msg">{msg}</p>
+          <div className="modal-actions">
+            <button className="btn-ghost" onClick={onCancel}>Annuler</button>
+            <button className="btn btn-danger" onClick={onOk}>Confirmer</button>
           </div>
         </div>
       </div>
-    </section>
+    );
+  }
 
-    <section class="destinations" id="destinations">
-      <div class="destinations-container">
+  /* ─ Connexion / Inscription ─ */
+  function Login({onLogin}) {
+    const [mode, setMode] = useState('login');
+    // login
+    const [email, setEmail]   = useState('');
+    const [mdp, setMdp]       = useState('');
+    // register
+    const [rEmail, setREmail]   = useState('');
+    const [rMdp, setRMdp]       = useState('');
+    const [rNom, setRNom]       = useState('');
+    const [rPrenom, setRPrenom] = useState('');
+    const [rRole, setRRole]     = useState('voyageur');
+    const [error, setError] = useState('');
+    const [busy, setBusy]   = useState(false);
 
-        <div class="section-header">
-          <h2>Destinations Populaires</h2>
-          <p>Explorez les plus belles destinations du monde et réservez votre prochain séjour</p>
+    async function submitLogin(e) {
+      e.preventDefault(); setError(''); setBusy(true);
+      try { await onLogin(email, mdp); }
+      catch(err){ setError(err.message); } finally { setBusy(false); }
+    }
+    async function submitRegister(e) {
+      e.preventDefault(); setError(''); setBusy(true);
+      try {
+        await api('register.php',{method:'POST',body:JSON.stringify({email:rEmail,mot_de_passe:rMdp,nom:rNom,prenom:rPrenom,role:rRole})});
+        await onLogin(rEmail, rMdp);
+      } catch(err){ setError(err.message); } finally { setBusy(false); }
+    }
+
+    return (
+      <div className="login-page">
+        <div className="card login-card">
+          <div className="login-card-header">
+            <img src="logo.png" alt="VoyageVista" className="login-logo"/>
+            <h1 className="login-title">Le monde n'attend que vous.</h1>
+          </div>
+          <div className="auth-tabs">
+            <button className={`auth-tab${mode==='login'?' active':''}`} onClick={()=>{setMode('login');setError('');}}>Se connecter</button>
+            <button className={`auth-tab${mode==='register'?' active':''}`} onClick={()=>{setMode('register');setError('');}}>Créer un compte</button>
+          </div>
+
+          {mode==='login' ? (
+            <form onSubmit={submitLogin} className="form">
+              <label className="field"><span>Email</span>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="username"/>
+              </label>
+              <label className="field"><span>Mot de passe</span>
+                <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)} required autoComplete="current-password"/>
+              </label>
+              {error && <p className="error">{error}</p>}
+              <button type="submit" className="btn" style={{width:'100%',marginTop:'.25rem'}} disabled={busy}>{busy?'Connexion…':'Se connecter'}</button>
+            </form>
+          ) : (
+            <form onSubmit={submitRegister} className="form">
+              <div className="form-row">
+                <label className="field"><span>Prénom</span><input value={rPrenom} onChange={e=>setRPrenom(e.target.value)} required/></label>
+                <label className="field"><span>Nom</span><input value={rNom} onChange={e=>setRNom(e.target.value)} required/></label>
+              </div>
+              <label className="field"><span>Email</span>
+                <input type="email" value={rEmail} onChange={e=>setREmail(e.target.value)} required autoComplete="email"/>
+              </label>
+              <label className="field"><span>Mot de passe (8 caractères min.)</span>
+                <input type="password" value={rMdp} onChange={e=>setRMdp(e.target.value)} required minLength={8} autoComplete="new-password"/>
+              </label>
+              <label className="field"><span>Je suis</span>
+                <select value={rRole} onChange={e=>setRRole(e.target.value)}>
+                  <option value="voyageur">Voyageur — je planifie des séjours</option>
+                  <option value="hote">Hôte — je propose des hébergements</option>
+                </select>
+              </label>
+              {error && <p className="error">{error}</p>}
+              <button type="submit" className="btn" style={{width:'100%',marginTop:'.25rem'}} disabled={busy}>{busy?'Création…':'Créer mon compte'}</button>
+            </form>
+          )}
         </div>
+      </div>
+    );
+  }
 
-
-        <div class="destinations-grid">
-
-          <div class="destination-card scroll-reveal">
-            <div class="destination-image">🏝️</div>
-            <div class="destination-info">
-              <div class="destination-header">
-                <div class="destination-name">
-                  <h3>Maldives</h3>
-                  <p>Océan Indien</p>
+  /* ─ Catalogue ─ */
+  function Catalogue({user,onLogout,nav,nbNotifs,nbItems=0,fmtCur,currency,changeCurrency}) {
+    const [destinations,setDestinations] = useState([]);
+    const [paysList,setPaysList]         = useState([]);
+    const [q,setQ]       = useState('');
+    const [pays,setPays] = useState('');
+    const [sort,setSort] = useState('nom');
+    const [view,setView] = useState('liste');
+    const [loading,setLoading] = useState(true);
+    const [error,setError]     = useState('');
+    const [suggestions,setSuggestions] = useState([]);
+    const [favoris,setFavoris] = useState(new Set());
+    const [showFavOnly,setShowFavOnly] = useState(false);
+    const sugRef = useRef(null);
+    const debRef = useRef(null);
+    useEffect(()=>{
+      load();
+      api('favoris.php').then(d=>setFavoris(new Set(d.favoris.map(Number)))).catch(()=>{});
+    },[]);
+    async function toggleFavori(e,id){
+      e.stopPropagation();
+      const r=await api('favoris.php',{method:'POST',body:JSON.stringify({id_destination:id})}).catch(()=>null);
+      if(r) setFavoris(prev=>{ const s=new Set(prev); r.action==='added'?s.add(id):s.delete(id); return s; });
+    }
+    useEffect(()=>{
+      const h=e=>{if(sugRef.current&&!sugRef.current.contains(e.target))setSuggestions([]);};
+      document.addEventListener('mousedown',h);
+      return ()=>document.removeEventListener('mousedown',h);
+    },[]);
+    async function load(overrides={}) {
+      setLoading(true); setError('');
+      const p=new URLSearchParams({q:overrides.q??q, pays:overrides.pays??pays, sort:overrides.sort??sort});
+      try {
+        const d=await api(`destinations.php?${p}`);
+        setDestinations(d.destinations);
+        if(d.pays?.length) setPaysList(d.pays);
+      } catch(err){ setError(err.message); } finally { setLoading(false); }
+    }
+    function handleSort(v){setSort(v);load({sort:v});}
+    function handlePays(v){setPays(v);load({pays:v});}
+    function handleQ(e){
+      const v=e.target.value; setQ(v);
+      clearTimeout(debRef.current);
+      if(v.length<2){setSuggestions([]);return;}
+      debRef.current=setTimeout(async()=>{
+        const d=await api(`destinations.php?q=${encodeURIComponent(v)}`).catch(()=>null);
+        setSuggestions(d?.destinations?.slice(0,5)??[]);
+      },220);
+    }
+    function selectSug(d){setQ(d.nom);setSuggestions([]);load({q:d.nom});}
+    return (
+      <div className="catalogue-page">
+        <section className="hero-section">
+          <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark" currency={currency} changeCurrency={changeCurrency}/>
+          <div className="hero-content">
+            <img src="logo.png" alt="VoyageVista" className="hero-logo"/>
+            <p className="hero-sub">Partez vraiment. Restez plus longtemps.<br/>Vivez là-bas comme un·e local·e.</p>
+            <div className="hero-search-wrap" ref={sugRef}>
+              <form onSubmit={e=>{e.preventDefault();setSuggestions([]);load();}} className="hero-search">
+                <span className="hero-search-icon">🔍</span>
+                <input type="text" placeholder="Destination, pays, région…" value={q} onChange={handleQ} autoComplete="off"/>
+                <button type="submit" className="btn-hero">Rechercher</button>
+              </form>
+              {suggestions.length>0&&(
+                <div className="sug-dropdown">
+                  {suggestions.map(d=>(
+                    <button key={d.id_destination} className="sug-item" onClick={()=>selectSug(d)}>
+                      <strong>{d.nom}</strong><span className="muted small">{d.pays}{d.region?` · ${d.region}`:''}</span>
+                    </button>
+                  ))}
                 </div>
-                <div class="destination-price">À partir de 1 299€</div>
+              )}
+            </div>
+          </div>
+        </section>
+        <section className="howto-section">
+          <div className="page">
+            <h2 className="howto-title">Comment ça marche</h2>
+            <div className="howto-grid">
+              <div className="howto-step">
+                <span className="howto-icon">🗺️</span>
+                <h3>Choisissez une destination</h3>
               </div>
-              <div class="destination-rating">
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span>
-                <span style="color: #999; margin-left: 0.5rem;">(4.8 — 2 145 avis)</span>
+              <div className="howto-step">
+                <span className="howto-icon">🏠</span>
+                <h3>Composez votre séjour</h3>
               </div>
-              <p class="destination-desc">Bungalows sur l'eau, plages de sable blanc et récifs coralliens spectaculaires.</p>
-              <div class="destination-features">
-                <span class="feature-tag">Plage Privée</span>
-                <span class="feature-tag">Snorkeling</span>
-                <span class="feature-tag">Spa</span>
-              </div>
-              <div class="destination-action">
-                <button class="btn-details">Détails</button>
-                <button class="btn-book">Réserver</button>
+              <div className="howto-step">
+                <span className="howto-icon">✈️</span>
+                <h3>Partez l'esprit libre</h3>
               </div>
             </div>
           </div>
+        </section>
+        <div className="page">
+          <div className="filter-bar">
+            <button className={`btn-fav-filter${showFavOnly?' active':''}`} onClick={()=>setShowFavOnly(v=>!v)}>
+              {showFavOnly?'♥':'♡'} Favoris
+            </button>
+            <label className="filter-item">
+              <span>Pays</span>
+              <select value={pays} onChange={e=>handlePays(e.target.value)}>
+                <option value="">Tous</option>
+                {paysList.map(p=><option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label className="filter-item">
+              <span>Trier par</span>
+              <select value={sort} onChange={e=>handleSort(e.target.value)}>
+                <option value="nom">Nom</option>
+                <option value="prix_asc">Prix croissant</option>
+                <option value="prix_desc">Prix décroissant</option>
+              </select>
+            </label>
+          </div>
+          <section className="detail-section">
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+              <h2 className="section-title" style={{margin:0,border:'none'}}>Destinations</h2>
+              <div className="view-toggle">
+                <button className={view==='liste'?'active':''} onClick={()=>setView('liste')}>⊞ Liste</button>
+                <button className={view==='globe'?'active':''} onClick={()=>setView('globe')}>🌍 Globe</button>
+              </div>
+            </div>
+            {loading && <p className="muted">Chargement…</p>}
+            {error   && <p className="error">{error}</p>}
+            {view==='globe'&&!loading&&<GlobeView destinations={destinations} nav={nav}/>}
+            <div className="grid" style={{display:view==='globe'?'none':'grid'}}>
+              {destinations.filter(d=>!showFavOnly||favoris.has(d.id_destination)).map(d=>(
+                <article key={d.id_destination} className="card dest-card"
+                  onClick={()=>nav('destination',d)} role="button" tabIndex={0}
+                  onKeyDown={e=>e.key==='Enter'&&nav('destination',d)}>
+                  <div className="dest-card-img">
+                    {d.image_url
+                      ? <img src={d.image_url} alt={d.nom} className="dest-card-photo"/>
+                      : <span className="dest-emoji">{destEmoji(d.pays,d.region)}</span>}
+                    <div className="dest-card-overlay">
+                      <span className="dest-pays-badge">{d.pays}</span>
+                      {d.nb_hebergements>0&&<span className="dest-count">{d.nb_hebergements} héb.</span>}
+                    </div>
+                    <button className={`fav-btn${favoris.has(d.id_destination)?' fav-active':''}`} onClick={e=>toggleFavori(e,d.id_destination)} title="Ajouter aux favoris">
+                      {favoris.has(d.id_destination)?'♥':'♡'}
+                    </button>
+                  </div>
+                  <div className="dest-card-body">
+                    <h2 className="dest-name">{d.nom}</h2>
+                    <p className="dest-desc">{d.description}</p>
+                    <div className="dest-card-footer">
+                      {d.prix_min&&fmtCur&&<p className="dest-price">À partir de <strong>{fmtCur(d.prix_min)}</strong><span className="muted small"> / sem.</span></p>}
+                      <span className="voir-plus">Explorer →</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {!loading&&destinations.length===0&&<p className="muted">Aucune destination ne correspond.</p>}
+          </section>
+        </div>
+      </div>
+    );
+  }
 
-          <div class="destination-card scroll-reveal">
-            <div class="destination-image">🏞️</div>
-            <div class="destination-info">
-              <div class="destination-header">
-                <div class="destination-name">
-                  <h3>Bali</h3>
-                  <p>Indonésie</p>
+  /* ─ Détail destination ─ */
+  function DestinationDetail({destination,user,onLogout,nav,nbNotifs,nbItems=0,fmtCur=null,currency='EUR',changeCurrency=null}) {
+    const [data,setData]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [sejourId,setSejourId] = useState(null);
+    // filtres hébergements
+    const [prixMax,setPrixMax]   = useState('');
+    const [capaMin,setCapaMin]   = useState('');
+    // hébergement
+    const [hebSel,setHebSel]     = useState(null);
+    const [dateDebut,setDateDebut] = useState('');
+    const [dateFin,setDateFin]     = useState('');
+    // activité
+    const [actSel,setActSel]     = useState(null);
+    const [crenPick,setCrenPick] = useState(null);
+    const [nbPart,setNbPart]     = useState(1);
+    // contexte séjour (dates + voyageurs globaux)
+    const [ctx,setCtx] = useState({dateAller:'',dateRetour:'',nbVoy:1,allerVille:'',retourBooked:false});
+    // transport
+    const [showTr,setShowTr]   = useState(null);
+    const [trBooking,setTrBooking] = useState({sens:'aller',nbPass:1,dateChoisie:''});
+    const [sectionTrSens,setSectionTrSens] = useState('aller');
+    const [msg,setMsg]     = useState('');
+    const [msgOk,setMsgOk] = useState(false);
+    const [busy,setBusy]   = useState(false);
+    const [scrolled,setScrolled]         = useState(false);
+    const [sejourResume,setSejourResume] = useState({n:0, total:0});
+    const [meteo,setMeteo]               = useState(null);
+    const hebSectionRef = useRef(null);
+
+    useEffect(()=>{
+      const handle = ()=>setScrolled(window.scrollY > 320);
+      window.addEventListener('scroll', handle, {passive:true});
+      return ()=>window.removeEventListener('scroll', handle);
+    },[]);
+
+    useEffect(()=>{
+      fetch(`https://wttr.in/${encodeURIComponent(destination.nom)}?format=j1`)
+        .then(r=>r.json())
+        .then(d=>{
+          const c=d.current_condition[0];
+          const code=parseInt(c.weatherCode);
+          const icon=code===113?'☀️':code===116?'⛅':[119,122].includes(code)?'☁️':
+            code===143?'🌫️':[176,263,266,293,296].includes(code)?'🌦️':
+            [299,302,305,308,311,314,353,356].includes(code)?'🌧️':
+            [179,227,230,317,320,323,326,368,371].includes(code)?'❄️':
+            [200,386,389].includes(code)?'⛈️':'🌡️';
+          setMeteo({temp:c.temp_C, icon});
+        }).catch(()=>{});
+    },[destination.nom]);
+
+    useEffect(()=>{
+      Promise.all([
+        api(`destination.php?id=${destination.id_destination}`),
+        api('sejour.php',{method:'POST'}),
+      ]).then(([detail,sej])=>{ setData(detail); setSejourId(sej.sejour.id_sejour); })
+        .catch(err=>setMsg(err.message)).finally(()=>setLoading(false));
+    },[destination.id_destination]);
+
+    useEffect(()=>{ if(showTr) setTrBooking(b=>({...b,nbPass:ctx.nbVoy})); },[ctx.nbVoy]);
+    useEffect(()=>{ if(ctx.nbVoy>1) setCapaMin(String(ctx.nbVoy)); },[ctx.nbVoy]);
+    useEffect(()=>{
+      if(ctx.retourBooked && hebSectionRef.current){
+        setTimeout(()=>hebSectionRef.current.scrollIntoView({behavior:'smooth',block:'start'}), 150);
+      }
+    },[ctx.retourBooked]);
+
+    function ouvrirHeb(h){
+      setMsg(''); setMsgOk(false); setActSel(null);
+      if(ctx.dateAller&&ctx.dateRetour){
+        setDateDebut(ctx.dateAller); setDateFin(ctx.dateRetour);
+      } else {
+        const d1=new Date(); d1.setDate(d1.getDate()+1);
+        const d2=new Date(); d2.setDate(d2.getDate()+8);
+        const fmt=d=>d.toISOString().split('T')[0];
+        setDateDebut(fmt(d1)); setDateFin(fmt(d2));
+      }
+      setHebSel(h);
+    }
+    function previewPrix(h){
+      if(!dateDebut||!dateFin) return null;
+      const j=Math.round((new Date(dateFin)-new Date(dateDebut))/86400000);
+      if(j<1) return null;
+      return Math.max(1,Math.ceil(j/7))*Number(h.prix_semaine);
+    }
+    async function reserverHeb(){
+      if(!hebSel||!dateDebut||!dateFin) return; setBusy(true); setMsg(''); setMsgOk(false);
+      try{
+        const r=await api('ajouter_hebergement.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_hebergement:hebSel.id_hebergement,date_debut:dateDebut,date_fin:dateFin})});
+        setMsg('Hébergement ajouté à votre séjour !'); setMsgOk(true); setHebSel(null);
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
+    }
+    async function ouvrirAct(a){
+      setMsg(''); setMsgOk(false); setHebSel(null);
+      const d=await api(`creneaux.php?activite=${a.id_activite}`);
+      let creneaux=d.creneaux;
+      if(ctx.dateAller&&ctx.dateRetour){
+        creneaux=creneaux.filter(c=>c.date_heure>=ctx.dateAller&&c.date_heure<=ctx.dateRetour+' 23:59:59');
+      }
+      setActSel({act:a,creneaux}); setCrenPick(creneaux[0]?.id_creneau??null); setNbPart(ctx.nbVoy);
+    }
+    async function reserverAct(){
+      if(!crenPick)return; setBusy(true); setMsg(''); setMsgOk(false);
+      try{
+        const r=await api('ajouter_activite.php',{method:'POST',body:JSON.stringify({id_sejour:sejourId,id_creneau:crenPick,nb_participants:nbPart})});
+        setMsg('Activité ajoutée !'); setMsgOk(true); setActSel(null);
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
+    }
+    function fmtTrDt(s){
+      const [date,time]=(s||'').split(' ');
+      if(!date) return '';
+      const [y,m,j]=date.split('-');
+      return `${j}/${m}/${y} à ${(time||'').slice(0,5)}`;
+    }
+    function fmtTrDate(s){
+      const [date]=(s||'').split(' ');
+      if(!date) return '';
+      const [y,m,j]=date.split('-');
+      return `${j}/${m}/${y}`;
+    }
+    function fmtTrTime(s){
+      const [,time]=(s||'').split(' ');
+      return time ? time.slice(0,5) : '';
+    }
+    function buildTrDates(t, dateChoisie){
+      const deptTime  = (t.date_depart  ||'').slice(11,16)||'00:00';
+      const arrivTime = (t.date_arrivee ||'').slice(11,16)||'00:00';
+      const d1 = new Date(t.date_depart), d2 = new Date(t.date_arrivee);
+      const dayOffset = (!isNaN(d1)&&!isNaN(d2)) ? Math.round((d2-d1)/86400000) : 0;
+      const arrivDate = new Date(dateChoisie);
+      arrivDate.setDate(arrivDate.getDate()+dayOffset);
+      return {
+        dateDepart:  `${dateChoisie} ${deptTime}:00`,
+        dateArrivee: `${arrivDate.toISOString().split('T')[0]} ${arrivTime}:00`,
+      };
+    }
+    function openTr(t){
+      const initSens = sectionTrSens;
+      const initDate = initSens==='retour' ? (ctx.dateRetour||'') : (ctx.dateAller||'');
+      setMsg(''); setMsgOk(false);
+      setShowTr(t.id_transport);
+      setTrBooking({sens:initSens, nbPass:ctx.nbVoy, dateChoisie:initDate});
+    }
+    async function reserverTransport(){
+      const t = (data?.transports??[]).find(x=>x.id_transport===showTr);
+      if(!t||!trBooking.dateChoisie) return;
+      setBusy(true); setMsg(''); setMsgOk(false);
+      try{
+        const {dateDepart,dateArrivee} = buildTrDates(t, trBooking.dateChoisie);
+        const r=await api('ajouter_transport.php',{method:'POST',body:JSON.stringify({
+          id_sejour:sejourId, id_transport:t.id_transport, sens:trBooking.sens,
+          date_depart:dateDepart, date_arrivee:dateArrivee, nb_passagers:ctx.nbVoy
+        })});
+        setMsg('Transport ajouté à votre séjour !'); setMsgOk(true); setShowTr(null);
+        if(trBooking.sens==='aller'){ setCtx(c=>({...c,allerVille:t.ville_depart})); setSectionTrSens('retour'); }
+        if(trBooking.sens==='retour'){ setCtx(c=>({...c,retourBooked:true})); }
+        setSejourResume(s=>({n:s.n+1, total:s.total+Number(r.prix)}));
+        // Rafraîchir les cartes pour refléter les nouvelles places_dispo
+        const d=await api(`destination.php?id=${destination.id_destination}`);
+        setData(prev=>({...prev,transports:d.transports}));
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
+    }
+
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const hebergements = data?.hebergements??[];
+    const activites    = data?.activites??[];
+    const transports   = data?.transports??[];
+
+    return (
+      <div>
+        {scrolled&&(
+          <div className="sticky-topbar">
+            <div style={{maxWidth:'1040px',margin:'0 auto',padding:'0 1.5rem'}}>
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+            </div>
+          </div>
+        )}
+        {sejourResume.n>0&&(
+          <div className="sejour-float">
+            <div>
+              <p className="sejour-float-n">{sejourResume.n} réservation{sejourResume.n>1?'s':''}</p>
+              <p className="sejour-float-price">{sejourResume.total.toFixed(0)} €</p>
+            </div>
+            <button className="btn sejour-float-btn" onClick={()=>nav('panier')}>Mon séjour →</button>
+          </div>
+        )}
+        {/* Banner photo */}
+        <div className="dest-banner">
+          {destination.image_url
+            ? <img src={destination.image_url} alt={destination.nom} className="dest-banner-img"/>
+            : <div className="dest-banner-placeholder"/>}
+          <div className="dest-banner-overlay">
+            <div className="dest-banner-topbar">
+              <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} variant="dark" currency={currency} changeCurrency={changeCurrency}/>
+            </div>
+            <div className="dest-banner-content">
+              <button className="btn-back-banner" onClick={()=>nav('catalogue')}>← Retour</button>
+              <div>
+                <span className="dest-banner-pays">{destination.pays}{destination.region&&` · ${destination.region}`}</span>
+                <h1 className="dest-banner-title">{destination.nom}</h1>
+                {meteo&&<div className="dest-meteo">{meteo.icon} {meteo.temp}°C</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="page">
+          <p className="dest-desc-full muted">{destination.description}</p>
+
+          {/* Contexte séjour */}
+          <div className="ctx-bar">
+            <label className="field">
+              <span>Date d'arrivée</span>
+              <input type="date" value={ctx.dateAller} min={new Date().toISOString().split('T')[0]} onChange={e=>setCtx(c=>({...c,dateAller:e.target.value}))}/>
+            </label>
+            <label className="field">
+              <span>Date de retour</span>
+              <input type="date" value={ctx.dateRetour} min={ctx.dateAller||new Date().toISOString().split('T')[0]} onChange={e=>setCtx(c=>({...c,dateRetour:e.target.value}))}/>
+            </label>
+            <label className="field">
+              <span>Voyageurs</span>
+              <input type="number" min="1" value={ctx.nbVoy} onChange={e=>setCtx(c=>({...c,nbVoy:Math.max(1,parseInt(e.target.value)||1)}))} style={{width:'75px'}}/>
+            </label>
+          </div>
+
+          {msg&&(
+            <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap',margin:'0 0 1rem'}}>
+              <p className={msgOk?'msg-ok':'error'} style={{margin:0}}>{msgOk?'✓ ':''}{msg}</p>
+              {msgOk&&<button className="btn-ghost" style={{fontSize:'.85rem',padding:'.35rem .8rem',whiteSpace:'nowrap'}} onClick={()=>nav('panier')}>Voir mon séjour →</button>}
+            </div>
+          )}
+
+          {/* Hint si pas de dates */}
+          {(!ctx.dateAller||!ctx.dateRetour)&&(
+            <p className="flow-hint">Renseignez vos dates et le nombre de voyageurs pour commencer.</p>
+          )}
+
+          {/* Transports */}
+          {ctx.dateAller&&ctx.dateRetour&&(
+          <section className="detail-section section-revealed">
+            <h2 className="section-title">Transports disponibles</h2>
+            {ctx.allerVille&&(
+              <div className="tr-sens-toggle">
+                <button className={`sens-tab${sectionTrSens==='aller'?' active':''}`} onClick={()=>{setSectionTrSens('aller');setShowTr(null);}}>Trajets aller</button>
+                <button className={`sens-tab${sectionTrSens==='retour'?' active':''}`} onClick={()=>{setSectionTrSens('retour');setShowTr(null);}}>Retour depuis {ctx.allerVille}</button>
+              </div>
+            )}
+            {(()=>{ const vt = sectionTrSens==='retour'&&ctx.allerVille ? transports.filter(t=>t.ville_depart===ctx.allerVille) : transports; return (
+            <>
+            {vt.length===0&&<p className="muted">Aucun transport disponible pour cette destination.</p>}
+            <div className="grid">
+              {vt.map(t=>(
+                <article key={t.id_transport} className="card tr-card">
+                  <div className="card-tag-row">
+                    <span className="tag">{transportIcon(t.type)} {t.type}</span>
+                    {t.compagnie&&<span className="tag">{t.compagnie}</span>}
+                  </div>
+                  <h3 className="card-title">{sectionTrSens==='retour'?`${destination.nom} → ${t.ville_depart}`:`${t.ville_depart} → ${destination.nom}`}</h3>
+                  <p className="price-tag">{Number(t.prix).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                  <p className="dispo-ok" style={{marginBottom:'1rem'}}>✓ {t.places_dispo} place(s)</p>
+                  <button className="btn" style={{width:'100%'}} onClick={()=>showTr===t.id_transport?setShowTr(null):openTr(t)}>
+                    {showTr===t.id_transport?'Fermer':'Réserver'}
+                  </button>
+                  {showTr===t.id_transport&&(()=>{
+                    const preview = buildTrDates(t, trBooking.dateChoisie);
+                    return (
+                    <div className="booking-panel">
+                      <div className="tr-schedule-preview">
+                        <div>
+                          <span className="muted small">Départ</span>
+                          <strong>{fmtTrDate(preview.dateDepart)}</strong>
+                          <strong>{fmtTrTime(preview.dateDepart)}</strong>
+                        </div>
+                        <div>
+                          <span className="muted small">Arrivée</span>
+                          <strong>{fmtTrDate(preview.dateArrivee)}</strong>
+                          <strong>{fmtTrTime(preview.dateArrivee)}</strong>
+                        </div>
+                      </div>
+                      <p className="prix-preview">Total : <strong>{(Number(t.prix)*ctx.nbVoy).toFixed(0)} €</strong><span className="muted small"> ({Number(t.prix).toFixed(0)} € × {ctx.nbVoy} pers.)</span></p>
+                      <div className="booking-actions">
+                        <button className="btn" disabled={busy} onClick={reserverTransport}>{busy?'Ajout…':'Confirmer'}</button>
+                        <button className="btn-ghost" onClick={()=>setShowTr(null)}>Annuler</button>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </article>
+              ))}
+            </div>
+            </>
+          ); })()}
+          </section>
+          )}
+
+          {/* Hint intermédiaire — aller réservé mais pas encore le retour */}
+          {ctx.allerVille&&!ctx.retourBooked&&(
+            <p className="flow-hint">Réservez maintenant votre trajet retour pour accéder aux hébergements.</p>
+          )}
+
+          {/* Hébergements + Activités — apparaissent après aller + retour réservés */}
+          {ctx.retourBooked&&(
+          <>
+          <section ref={hebSectionRef} className="detail-section section-revealed">
+            <h2 className="section-title">Hébergements</h2>
+            <div className="filter-bar" style={{marginBottom:'1rem'}}>
+              <label className="filter-item"><span>Prix max (€/sem)</span>
+                <input type="number" min="0" placeholder="Illimité" value={prixMax} onChange={e=>setPrixMax(e.target.value)} style={{width:'110px'}}/>
+              </label>
+              <label className="filter-item"><span>Capacité min</span>
+                <input type="number" min="1" placeholder="Toutes" value={capaMin} onChange={e=>setCapaMin(e.target.value)} style={{width:'80px'}}/>
+              </label>
+            </div>
+            {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).length===0&&<p className="muted">Aucun hébergement ne correspond aux filtres.</p>}
+            <div className="grid">
+              {hebergements.filter(h=>(prixMax===''||Number(h.prix_semaine)<=Number(prixMax))&&(capaMin===''||Number(h.capacite)>=Number(capaMin))).map(h=>(
+                <article key={h.id_hebergement} className="card heb-card">
+                  {h.image_url&&<div className="heb-card-img"><img src={h.image_url} alt={h.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{h.type}</span><span className="dest-count">👥 {h.capacite}</span></div></div>}
+                  <div className="heb-card-body">
+                    <h3 className="card-title">{h.nom}</h3>
+                    {h.avg_note&&<div className="card-stars"><StarRating value={Number(h.avg_note)}/><span className="muted small">({h.nb_avis})</span></div>}
+                    <p className="price-tag">{Number(h.prix_semaine).toFixed(0)} € <span className="muted small">/ semaine</span></p>
+                    <button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirHeb(h)}>Réserver</button>
+                    {hebSel?.id_hebergement===h.id_hebergement&&(
+                      <div className="booking-panel">
+                        <p className="booking-label">Choisissez vos dates</p>
+                        <div className="date-picker-row">
+                          <label className="field" style={{flex:1}}>
+                            <span>Arrivée</span>
+                            <input type="date" value={dateDebut} min={new Date().toISOString().split('T')[0]}
+                              onChange={e=>{setDateDebut(e.target.value); if(dateFin&&e.target.value>=dateFin){const d=new Date(e.target.value);d.setDate(d.getDate()+7);setDateFin(d.toISOString().split('T')[0]);}}}/>
+                          </label>
+                          <label className="field" style={{flex:1}}>
+                            <span>Départ</span>
+                            <input type="date" value={dateFin} min={dateDebut||new Date().toISOString().split('T')[0]}
+                              onChange={e=>setDateFin(e.target.value)}/>
+                          </label>
+                        </div>
+                        {previewPrix(h)&&<p className="prix-preview">Total estimé : <strong>{previewPrix(h).toFixed(0)} €</strong> <span className="muted small">({Math.max(1,Math.ceil(Math.round((new Date(dateFin)-new Date(dateDebut))/86400000)/7))} sem.)</span></p>}
+                        <div className="booking-actions">
+                          <button className="btn" disabled={busy||!dateDebut||!dateFin} onClick={reserverHeb}>{busy?'Réservation…':'Confirmer'}</button>
+                          <button className="btn-ghost" onClick={()=>setHebSel(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* Activités */}
+          <section className="detail-section section-revealed" style={{animationDelay:'.15s'}}>
+            <h2 className="section-title">Expériences locales</h2>
+            {activites.length===0&&<p className="muted">Aucune activité proposée.</p>}
+            <div className="grid">
+              {activites.map(a=>(
+                <article key={a.id_activite} className="card act-card">
+                  {a.image_url&&<div className="heb-card-img"><img src={a.image_url} alt={a.nom} className="heb-card-photo"/><div className="heb-card-badges"><span className="dest-pays-badge">{a.categorie}</span><span className="dest-count">{a.duree_h}h</span></div></div>}
+                  <div className="heb-card-body">
+                    <h3 className="card-title">{a.nom}</h3>
+                    {a.avg_note&&<div className="card-stars"><StarRating value={Number(a.avg_note)}/><span className="muted small">({a.nb_avis})</span></div>}
+                    <p className="price-tag">{Number(a.prix_personne).toFixed(0)} € <span className="muted small">/ pers.</span></p>
+                    {a.prochain_creneau?<p className="dispo-ok">✓ Prochain : {fmtDatetime(a.prochain_creneau)}</p>:<p className="dispo-none">Complet</p>}
+                    {a.prochain_creneau&&<button className="btn" style={{marginTop:'.75rem',width:'100%'}} onClick={()=>ouvrirAct(a)}>Ajouter</button>}
+                    {actSel?.act.id_activite===a.id_activite&&(
+                      <div className="booking-panel">
+                        <p className="booking-label">Choisissez une date :</p>
+                        {actSel.creneaux.length===0&&<p className="muted small">Aucun créneau disponible.</p>}
+                        <div className="creneau-grid">
+                          {actSel.creneaux.map(cr=>(
+                            <button key={cr.id_creneau}
+                              className={`creneau-card${crenPick===cr.id_creneau?' selected':''}`}
+                              onClick={()=>setCrenPick(cr.id_creneau)}>
+                              <span className="creneau-date">{fmtDate(cr.date_heure)}</span>
+                              <span className="creneau-time">{new Date(cr.date_heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>
+                              <span className="creneau-places">{cr.places_restantes} place{cr.places_restantes>1?'s':''}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {crenPick&&<>
+                          <label className="field" style={{marginTop:'.75rem'}}>
+                            <span>Participants</span>
+                            <input type="number" min="1" value={nbPart} onChange={e=>setNbPart(Math.max(1,parseInt(e.target.value)||1))} style={{width:'90px'}}/>
+                          </label>
+                          <p className="prix-preview">Total : <strong>{(Number(a.prix_personne)*nbPart).toFixed(0)} €</strong></p>
+                        </>}
+                        <div className="booking-actions">
+                          <button className="btn" disabled={busy||!crenPick} onClick={reserverAct}>{busy?'Ajout…':'Confirmer'}</button>
+                          <button className="btn-ghost" onClick={()=>setActSel(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+          </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ─ Panier ─ */
+  function Panier({user,onLogout,nav,nbNotifs,nbItems=0,currency='EUR',changeCurrency=null}) {
+    const [data,setData]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [busy,setBusy]         = useState(false);
+    const [error,setError]       = useState('');
+    const [confirmModal,setConfirmModal] = useState(null);
+    const [showPaiement,setShowPaiement] = useState(false);
+    const defCard={titulaire:'',numero:'',expiry:'',cvv:''};
+    const [card,setCard] = useState(defCard);
+    const [modifHeb,setModifHeb] = useState(null); // {id, id_hebergement, dispos:[]}
+    const [modifDispo,setModifDispo] = useState(null);
+
+    async function reload(){ const d=await api('mon_sejour.php'); setData(d); }
+    useEffect(()=>{ reload().catch(err=>setError(err.message)).finally(()=>setLoading(false)); },[]);
+
+    async function ouvrirModif(h){
+      setError('');
+      const d=await api(`dispos.php?hebergement=${h.id_hebergement}`);
+      const dispos=d.dispos??[];
+      setModifHeb({id:h.id, id_hebergement:h.id_hebergement, dispos});
+      setModifDispo(dispos[0]?.id_dispo??null);
+    }
+    async function confirmerModif(){
+      if(!modifDispo)return; setBusy(true); setError('');
+      try{
+        await api('modifier_hebergement.php',{method:'POST',body:JSON.stringify({id:modifHeb.id,id_dispo:modifDispo})});
+        setModifHeb(null); await reload();
+      }catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+
+    async function retirer(type,id){
+      setBusy(true); setError('');
+      try{ await api(`retirer_${type}.php`,{method:'POST',body:JSON.stringify({id})}); await reload(); }
+      catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+    function supprimerSejour(){
+      setConfirmModal({msg:'Supprimer ce séjour ? Cette action est irréversible.', fn:async()=>{
+        setBusy(true); setError('');
+        try{ await api('supprimer_sejour.php',{method:'POST'}); await reload(); }
+        catch(err){setError(err.message);}finally{setBusy(false);}
+      }});
+    }
+    async function valider(e){
+      e.preventDefault(); setBusy(true); setError('');
+      try{ const r=await api('valider_sejour.php',{method:'POST'}); nav('confirmation',r); }
+      catch(err){setError(err.message);}finally{setBusy(false);}
+    }
+    const selCard=e=>setCard(c=>({...c,[e.target.name]:e.target.value}));
+
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const vide=!data?.sejour;
+
+    if(showPaiement) return (
+      <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>setShowPaiement(false)}>← Retour au séjour</button>
+          <h1 className="detail-title">Paiement</h1>
+        </div>
+        <div className="card" style={{maxWidth:'480px',margin:'0 auto',padding:'2rem'}}>
+          <p className="muted" style={{marginBottom:'1.5rem'}}>Total à régler : <strong>{Number(data.total).toFixed(2)} €</strong></p>
+          <form onSubmit={valider} className="form">
+            <label className="field"><span>Nom du titulaire</span>
+              <input name="titulaire" value={card.titulaire} onChange={selCard} placeholder="Jean Dupont" required/>
+            </label>
+            <label className="field"><span>Numéro de carte</span>
+              <input name="numero" value={card.numero} onChange={selCard} placeholder="4242 4242 4242 4242" maxLength={19} required/>
+            </label>
+            <div className="form-row">
+              <label className="field"><span>Date d'expiration</span>
+                <input name="expiry" value={card.expiry} onChange={selCard} placeholder="MM/AA" maxLength={5} required/>
+              </label>
+              <label className="field"><span>CVV</span>
+                <input name="cvv" value={card.cvv} onChange={selCard} placeholder="123" maxLength={4} required/>
+              </label>
+            </div>
+            {error&&<p className="error">{error}</p>}
+            <button type="submit" className="btn" style={{width:'100%',marginTop:'.5rem'}} disabled={busy}>{busy?'Traitement…':'Confirmer le paiement →'}</button>
+          </form>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mon séjour</h1>
+          {vide&&<p className="muted">Votre panier est vide. Choisissez une destination pour commencer.</p>}
+        </div>
+        {!vide&&<>
+          <p className="muted" style={{marginBottom:'1rem'}}>{data.sejour.titre}</p>
+          {data.transports?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Transports</h2>
+              {data.transports.map(t=>(
+                <div key={t.id} className="panier-item">
+                  <div>
+                    <strong>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</strong>
+                    {' '}<span className="tag">{transportIcon(t.type)} {t.type}</span>
+                    {t.compagnie&&<span className="muted small" style={{marginLeft:'.4rem'}}>{t.compagnie}</span>}
+                    <span className="tag" style={{marginLeft:'.4rem',fontSize:'.75rem'}}>{t.sens==='retour'?'retour':'aller'}</span>
+                    <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s)</p>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'.75rem'}}>
+                    <span className="price-tag small">{Number(t.prix).toFixed(0)} €</span>
+                    <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('transport',t.id)}>Retirer</button>
+                  </div>
                 </div>
-                <div class="destination-price">À partir de 799€</div>
-              </div>
-              <div class="destination-rating">
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span>
-                <span style="color: #999; margin-left: 0.5rem;">(4.7 — 3 421 avis)</span>
-              </div>
-              <p class="destination-desc">Temples anciens, rizières verdoyantes et plages de sable noir de Bali.</p>
-              <div class="destination-features">
-                <span class="feature-tag">Temples</span>
-                <span class="feature-tag">Yoga</span>
-                <span class="feature-tag">Nature</span>
-              </div>
-              <div class="destination-action">
-                <button class="btn-details">Détails</button>
-                <button class="btn-book">Réserver</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="destination-card scroll-reveal">
-            <div class="destination-image">🌅</div>
-            <div class="destination-info">
-              <div class="destination-header">
-                <div class="destination-name">
-                  <h3>Santorin</h3>
-                  <p>Grèce</p>
+              ))}
+            </section>
+          )}
+          {data.hebergements?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Hébergements</h2>
+              {data.hebergements.map(h=>(
+                <div key={h.id}>
+                  <div className="panier-item">
+                    <div><strong>{h.nom_hebergement}</strong> <span className="tag">{h.type}</span>
+                      <p className="muted small">{fmtDate(h.date_debut)} → {fmtDate(h.date_fin)}</p>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'.5rem',flexWrap:'wrap'}}>
+                      <span className="price-tag small">{Number(h.prix).toFixed(0)} €</span>
+                      <button className="btn-ghost" style={{fontSize:'.8rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>modifHeb?.id===h.id?setModifHeb(null):ouvrirModif(h)}>Modifier</button>
+                      <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('hebergement',h.id)}>Retirer</button>
+                    </div>
+                  </div>
+                  {modifHeb?.id===h.id&&(
+                    <div className="booking-panel" style={{marginBottom:'1rem'}}>
+                      <p className="booking-label">Choisir une nouvelle période :</p>
+                      {modifHeb.dispos.length===0?<p className="muted small">Aucune autre période disponible.</p>
+                        :modifHeb.dispos.map(dp=>(
+                          <label key={dp.id_dispo} className="picker-item">
+                            <input type="radio" name="modif_dispo" checked={modifDispo===dp.id_dispo} onChange={()=>setModifDispo(dp.id_dispo)}/>
+                            <span>{fmtDate(dp.date_debut)} → {fmtDate(dp.date_fin)}</span>
+                          </label>
+                        ))}
+                      <div className="booking-actions">
+                        <button className="btn" disabled={busy||!modifDispo} onClick={confirmerModif}>{busy?'Modification…':'Confirmer'}</button>
+                        <button className="btn-ghost" onClick={()=>setModifHeb(null)}>Annuler</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div class="destination-price">À partir de 1 099€</div>
-              </div>
-              <div class="destination-rating">
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span>
-                <span style="color: #999; margin-left: 0.5rem;">(4.9 — 1 876 avis)</span>
-              </div>
-              <p class="destination-desc">Couchers de soleil magiques, maisons blanches et bleues, vins locaux réputés.</p>
-              <div class="destination-features">
-                <span class="feature-tag">Coucher de Soleil</span>
-                <span class="feature-tag">Vin</span>
-                <span class="feature-tag">Mer</span>
-              </div>
-              <div class="destination-action">
-                <button class="btn-details">Détails</button>
-                <button class="btn-book">Réserver</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="destination-card scroll-reveal">
-            <div class="destination-image">🏛️</div>
-            <div class="destination-info">
-              <div class="destination-header">
-                <div class="destination-name">
-                  <h3>Thaïlande</h3>
-                  <p>Asie du Sud-Est</p>
+              ))}
+            </section>
+          )}
+          {data.activites?.length>0&&(
+            <section className="detail-section">
+              <h2 className="section-title">Activités</h2>
+              {data.activites.map(a=>(
+                <div key={a.id} className="panier-item">
+                  <div><strong>{a.nom_activite}</strong> <span className="tag">{a.categorie}</span>
+                    <p className="muted small">{fmtDatetime(a.date_heure)} · {a.nb_participants} pers.</p>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'.75rem'}}>
+                    <span className="price-tag small">{Number(a.prix).toFixed(0)} €</span>
+                    <button className="btn-danger-sm" disabled={busy} onClick={()=>retirer('activite',a.id)}>Retirer</button>
+                  </div>
                 </div>
-                <div class="destination-price">À partir de 649€</div>
+              ))}
+            </section>
+          )}
+          <SejourTimeline hebergements={data.hebergements} activites={data.activites} transports={data.transports}/>
+          <div className="total-row"><span>Total</span><span className="price-tag">{Number(data.total).toFixed(2)} €</span></div>
+          {error&&<p className="error" style={{marginTop:'1rem'}}>{error}</p>}
+          <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem',flexWrap:'wrap'}}>
+            <button className="btn" style={{minWidth:'220px'}} disabled={busy} onClick={()=>setShowPaiement(true)}>Procéder au paiement →</button>
+            <button className="btn-ghost" style={{color:'#c0392b'}} disabled={busy} onClick={supprimerSejour}>Supprimer ce séjour</button>
+          </div>
+        </>}
+      </div>
+    );
+  }
+
+  /* ─ Confirmation ─ */
+  function Confirmation({infos,nav}){
+    return (
+      <div className="screen-center conf-page">
+        <div className="card conf-card">
+          <div className="conf-check">✓</div>
+          <h1 className="auth-title" style={{textAlign:'center'}}>Réservation confirmée !</h1>
+          <p className="muted" style={{textAlign:'center'}}>Votre séjour <strong>{infos.titre}</strong> a été validé.</p>
+          <div className="ref-block">
+            <span className="muted small">Référence</span>
+            <p style={{fontFamily:'monospace',fontSize:'1.2rem',margin:'.25rem 0 0'}}>{infos.reference}</p>
+          </div>
+          <p className="price-tag" style={{textAlign:'center',marginTop:'1rem'}}>{Number(infos.montant).toFixed(2)} €</p>
+          <p className="muted small" style={{textAlign:'center'}}>Paiement simulé — projet pédagogique.</p>
+          <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem'}}>
+            <button className="btn" style={{flex:1}} onClick={()=>nav('catalogue')}>Retour au catalogue</button>
+            <button className="btn-ghost no-print" onClick={()=>nav('historique')}>Mes voyages</button>
+            <button className="btn-ghost no-print" onClick={()=>window.print()}>🖨 Imprimer</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─ Profil ─ */
+  function Profil({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
+    const [profil,setProfil]   = useState(null);
+    const [loading,setLoading] = useState(true);
+    const [edit,setEdit]       = useState(false);
+    const [form,setForm]       = useState({nom:'',prenom:'',mot_de_passe:''});
+    const [msg,setMsg]         = useState('');
+    const [busy,setBusy]       = useState(false);
+    useEffect(()=>{
+      api('profil.php').then(d=>{ setProfil(d.user); setForm({nom:d.user.nom,prenom:d.user.prenom,mot_de_passe:''}); })
+        .finally(()=>setLoading(false));
+    },[]);
+    async function sauvegarder(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('profil.php',{method:'POST',body:JSON.stringify(form)});
+        setMsg('✓ Profil mis à jour !'); setEdit(false);
+        const d=await api('profil.php'); setProfil(d.user);
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const roleLabel={voyageur:'Voyageur',hote:'Hôte',admin:'Administrateur'};
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mon profil</h1>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        {!edit ? (
+          <div className="card" style={{maxWidth:'480px',padding:'2rem'}}>
+            <div className="profil-row"><span className="muted small">Prénom</span><strong>{profil.prenom}</strong></div>
+            <div className="profil-row"><span className="muted small">Nom</span><strong>{profil.nom}</strong></div>
+            <div className="profil-row"><span className="muted small">Email</span><strong>{profil.email}</strong></div>
+            <div className="profil-row"><span className="muted small">Rôle</span><span className="tag">{roleLabel[profil.role]||profil.role}</span></div>
+            <div className="profil-row"><span className="muted small">Statut</span><span className={`tag${profil.statut==='actif'?'':' tag-warn'}`}>{profil.statut}</span></div>
+            <div className="profil-row"><span className="muted small">Membre depuis</span><strong>{fmtDate(profil.date_inscription)}</strong></div>
+            <button className="btn" style={{marginTop:'1.5rem'}} onClick={()=>setEdit(true)}>Modifier mon profil</button>
+          </div>
+        ) : (
+          <form onSubmit={sauvegarder} className="form card" style={{maxWidth:'480px',padding:'2rem'}}>
+            <div className="form-row">
+              <label className="field"><span>Prénom</span><input value={form.prenom} onChange={e=>setForm(f=>({...f,prenom:e.target.value}))} required/></label>
+              <label className="field"><span>Nom</span><input value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} required/></label>
+            </div>
+            <label className="field"><span>Nouveau mot de passe (laisser vide pour ne pas changer)</span>
+              <input type="password" value={form.mot_de_passe} onChange={e=>setForm(f=>({...f,mot_de_passe:e.target.value}))} minLength={8} autoComplete="new-password"/>
+            </label>
+            <div className="booking-actions">
+              <button type="submit" className="btn" disabled={busy}>{busy?'Sauvegarde…':'Sauvegarder'}</button>
+              <button type="button" className="btn-ghost" onClick={()=>setEdit(false)}>Annuler</button>
+            </div>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  /* ─ Notifications ─ */
+  function Notifications({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
+    const [notifs,setNotifs]   = useState([]);
+    const [loading,setLoading] = useState(true);
+    useEffect(()=>{ api('notifications.php').then(d=>setNotifs(d.notifications)).finally(()=>setLoading(false)); },[]);
+    async function toutLu(){ await api('notifications.php',{method:'POST'}); setNotifs(notifs.map(n=>({...n,lu:1}))); }
+    const icons={reservation_confirmee:'✓',depart_proche:'✈',modification:'📝',activite_a_venir:'⭐',systeme:'ℹ'};
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Notifications</h1>
+        </div>
+        {!loading&&notifs.some(n=>!n.lu)&&<button className="btn-ghost" style={{marginBottom:'1rem'}} onClick={toutLu}>Tout marquer comme lu</button>}
+        {loading&&<p className="muted">Chargement…</p>}
+        {!loading&&notifs.length===0&&<p className="muted">Aucune notification.</p>}
+        {notifs.map(n=>(
+          <div key={n.id_notification} className={`notif-item${n.lu==1?' lu':''}`}>
+            <span className="notif-icon">{icons[n.type]||'ℹ'}</span>
+            <div><strong>{n.titre}</strong><p className="muted small">{n.message}</p><p className="muted small">{fmtDatetime(n.date_creation)}</p></div>
+            {n.lu==0&&<span className="notif-dot"></span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* ─ Espace hôte ─ */
+  function HoteDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
+    const [data,setData]         = useState(null);
+    const [destinations,setDests] = useState([]);
+    const [loading,setLoading]   = useState(true);
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+    const [confirmModal,setConfirmModal] = useState(null);
+    const [showHebForm,setShowHebForm] = useState(false);
+    const [showActForm,setShowActForm] = useState(false);
+    const [showDispoFor,setShowDispoFor] = useState(null);
+    const defHeb={nom:'',type:'appartement',capacite:2,prix_semaine:500,duree_min_nuits:7,id_destination:''};
+    const defAct={nom:'',description:'',categorie:'aventure',prix_personne:50,duree_h:2,niveau:'facile',id_destination:'',date_heure:'',places_totales:8};
+    const defDispo={date_debut:'',date_fin:''};
+    const [formHeb,setFormHeb]   = useState(defHeb);
+    const [formAct,setFormAct]   = useState(defAct);
+    const [formDispo,setFormDispo] = useState(defDispo);
+    async function reload(){
+      const [d,dests]=await Promise.all([api('hote_dashboard.php'),api('destinations.php')]);
+      setData(d); setDests(dests.destinations);
+      const id=String(dests.destinations[0]?.id_destination??'');
+      setFormHeb(f=>({...f,id_destination:id})); setFormAct(f=>({...f,id_destination:id}));
+    }
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    async function submitHeb(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_hebergement.php',{method:'POST',body:JSON.stringify({...formHeb,capacite:parseInt(formHeb.capacite),prix_semaine:parseFloat(formHeb.prix_semaine),duree_min_nuits:parseInt(formHeb.duree_min_nuits),id_destination:parseInt(formHeb.id_destination)})});
+        setMsg('✓ Hébergement publié !'); setShowHebForm(false); setFormHeb(defHeb); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitAct(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_activite.php',{method:'POST',body:JSON.stringify({...formAct,prix_personne:parseFloat(formAct.prix_personne),duree_h:parseFloat(formAct.duree_h),places_totales:parseInt(formAct.places_totales),id_destination:parseInt(formAct.id_destination)})});
+        setMsg('✓ Activité publiée !'); setShowActForm(false); setFormAct(defAct); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitDispo(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('hote_creer_dispo.php',{method:'POST',body:JSON.stringify({id_hebergement:showDispoFor,...formDispo})});
+        setMsg('✓ Disponibilité ajoutée !'); setShowDispoFor(null); setFormDispo(defDispo); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    const sel=setter=>e=>setter(f=>({...f,[e.target.name]:e.target.value}));
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    return (
+      <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <h1 className="detail-title">Espace hôte</h1>
+          <p className="muted">Gérez vos hébergements et vos expériences locales.</p>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Mes hébergements</h2>
+            <button className="btn" onClick={()=>{setShowHebForm(!showHebForm);setShowActForm(false);}}>{showHebForm?'Annuler':'+ Ajouter'}</button>
+          </div>
+          {showHebForm&&(
+            <form onSubmit={submitHeb} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={formHeb.nom} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Type</span><select name="type" value={formHeb.type} onChange={sel(setFormHeb)}>{['appartement','maison','villa','chambre','autre'].map(t=><option key={t}>{t}</option>)}</select></label>
               </div>
-              <div class="destination-rating">
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span><span class="star">★</span>
-                <span class="star">★</span>
-                <span style="color: #999; margin-left: 0.5rem;">(4.8 — 2 654 avis)</span>
+              <div className="form-row">
+                <label className="field"><span>Capacité</span><input type="number" name="capacite" min="1" value={formHeb.capacite} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Prix/sem (€)</span><input type="number" name="prix_semaine" min="1" step="0.01" value={formHeb.prix_semaine} onChange={sel(setFormHeb)} required/></label>
+                <label className="field"><span>Durée min (nuits)</span><input type="number" name="duree_min_nuits" min="1" value={formHeb.duree_min_nuits} onChange={sel(setFormHeb)} required/></label>
               </div>
-              <p class="destination-desc">Bangkok, îles tropicales et cuisine thaïlandaise délicieuse.</p>
-              <div class="destination-features">
-                <span class="feature-tag">Îles</span>
-                <span class="feature-tag">Culture</span>
-                <span class="feature-tag">Cuisine</span>
+              <label className="field"><span>Destination</span><select name="id_destination" value={formHeb.id_destination} onChange={sel(setFormHeb)}>{destinations.map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}</select></label>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier'}</button>
+            </form>
+          )}
+          {(data?.hebergements??[]).length===0&&!showHebForm&&<p className="muted">Aucun hébergement publié.</p>}
+          {(data?.hebergements??[]).map(h=>(
+            <div key={h.id_hebergement} className="dash-item">
+              <div><strong>{h.nom}</strong> <span className="tag">{h.type}</span> <span className="tag">{h.destination}</span>
+                <p className="muted small">{h.capacite} pers. · {h.prix_semaine} €/sem · {h.nb_dispos} dispo(s)</p>
               </div>
-              <div class="destination-action">
-                <button class="btn-details">Détails</button>
-                <button class="btn-book">Réserver</button>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-
-        <div class="carousel-nav">
-          <button class="carousel-btn">←</button>
-          <button class="carousel-btn">→</button>
-        </div>
-
-
-        <div style="text-align: center; margin-top: 2rem;">
-          <a href="destinations.html" class="btn btn-primary">Voir toutes les destinations</a>
-        </div>
-
-      </div>
-    </section>
-
-    <section class="why-us" id="why-us">
-      <div class="section-header">
-        <h2>Pourquoi Choisir VoyageVista ?</h2>
-        <p>Les avantages qui font de VoyageVista votre meilleur allié de voyage</p>
-      </div>
-
-      <div class="why-us-grid">
-        <div class="benefit-card scroll-reveal">
-          <div class="benefit-icon">🔐</div>
-          <h4>Réservations Sécurisées</h4>
-          <p>Paiements cryptés et garantie de remboursement. Vos données sont toujours protégées.</p>
-        </div>
-        <div class="benefit-card scroll-reveal">
-          <div class="benefit-icon">💰</div>
-          <h4>Meilleurs Prix Garantis</h4>
-          <p>Si vous trouvez moins cher ailleurs, nous vous remboursons la différence.</p>
-        </div>
-        <div class="benefit-card scroll-reveal">
-          <div class="benefit-icon">🌍</div>
-          <h4>Plus de 150 Destinations</h4>
-          <p>Des plages paradisiaques aux montagnes majestueuses, le monde s'offre à vous.</p>
-        </div>
-        <div class="benefit-card scroll-reveal">
-          <div class="benefit-icon">🎯</div>
-          <h4>Support Client 24/7</h4>
-          <p>Notre équipe est disponible à toute heure pour répondre à vos questions.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="experiences" id="experiences">
-      <div class="experiences-container">
-
-        <div class="section-header">
-          <h2>Expériences Inoubliables</h2>
-          <p>Vivez des moments exceptionnels et créez des souvenirs pour toute une vie</p>
-        </div>
-
-        <div class="experiences-grid">
-
-          <div class="experience-card scroll-reveal">
-            <div class="experience-image">🤿</div>
-            <div class="experience-content">
-              <h3 class="experience-title">Plongée Sous-Marine</h3>
-              <p class="experience-desc">Explorez les récifs coralliens et découvrez la vie marine dans les eaux cristallines des tropiques.</p>
-              <a href="#" class="experience-link">Découvrir la plongée →</a>
-            </div>
-          </div>
-
-          <div class="experience-card scroll-reveal">
-            <div class="experience-image">🏄</div>
-            <div class="experience-content">
-              <h3 class="experience-title">Surf & Sports d'Eau</h3>
-              <p class="experience-desc">Prenez les vagues sur les plus belles plages du monde. Cours et équipement inclus pour tous niveaux.</p>
-              <a href="#" class="experience-link">Essayer le surf →</a>
-            </div>
-          </div>
-
-          <div class="experience-card scroll-reveal">
-            <div class="experience-image">🏔️</div>
-            <div class="experience-content">
-              <h3 class="experience-title">Trekking & Randonnée</h3>
-              <p class="experience-desc">Explorez les paysages montagneux les plus impressionnants du globe à votre propre rythme.</p>
-              <a href="#" class="experience-link">Commencer l'aventure →</a>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <section class="testimonials" id="testimonials">
-      <div class="testimonials-container">
-
-        <div class="section-header">
-          <h2>Avis de Nos Voyageurs</h2>
-          <p>Les témoignages de ceux qui ont vécu des expériences inoubliables avec VoyageVista</p>
-        </div>
-
-        <div class="testimonials-grid">
-
-          <div class="testimonial-card scroll-reveal">
-            <div class="testimonial-stars">
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span>
-            </div>
-            <p class="testimonial-text">"VoyageVista a transformé mon voyage aux Maldives en expérience magique ! Le service était impeccable du début à la fin."</p>
-            <div class="testimonial-author">
-              <div class="author-avatar">A</div>
-              <div class="author-info">
-                <h4>Amélie Dupont</h4>
-                <p>Paris, France</p>
+              <div style={{display:'flex',gap:'.5rem'}}>
+                <button className="btn-ghost" onClick={()=>{setShowDispoFor(h.id_hebergement);setMsg('');}}>+ Dispo</button>
+                <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:'Supprimer cet hébergement ?', fn:async()=>{
+                  setBusy(true);setMsg('');
+                  try{await api('hote_supprimer_hebergement.php',{method:'POST',body:JSON.stringify({id:h.id_hebergement})});await reload();}
+                  catch(err){setMsg(err.message);}finally{setBusy(false);}
+                }})}>Supprimer</button>
               </div>
             </div>
+          ))}
+          {showDispoFor&&(
+            <form onSubmit={submitDispo} className="dash-form" style={{marginTop:'.5rem'}}>
+              <p className="booking-label">Nouvelle disponibilité</p>
+              <div className="form-row">
+                <label className="field"><span>Date début</span><input type="date" name="date_debut" value={formDispo.date_debut} onChange={sel(setFormDispo)} required/></label>
+                <label className="field"><span>Date fin</span><input type="date" name="date_fin" value={formDispo.date_fin} onChange={sel(setFormDispo)} required/></label>
+              </div>
+              <div className="booking-actions">
+                <button type="submit" className="btn" disabled={busy}>{busy?'…':'Ajouter'}</button>
+                <button type="button" className="btn-ghost" onClick={()=>setShowDispoFor(null)}>Annuler</button>
+              </div>
+            </form>
+          )}
+        </section>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Mes activités</h2>
+            <button className="btn" onClick={()=>{setShowActForm(!showActForm);setShowHebForm(false);}}>{showActForm?'Annuler':'+ Ajouter'}</button>
           </div>
-
-          <div class="testimonial-card scroll-reveal">
-            <div class="testimonial-stars">
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span>
+          {showActForm&&(
+            <form onSubmit={submitAct} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={formAct.nom} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Catégorie</span><select name="categorie" value={formAct.categorie} onChange={sel(setFormAct)}>{['aventure','culture','nature','gastronomie','bien_etre'].map(c=><option key={c}>{c}</option>)}</select></label>
+                <label className="field"><span>Niveau</span><select name="niveau" value={formAct.niveau} onChange={sel(setFormAct)}>{['facile','moyen','difficile'].map(n=><option key={n}>{n}</option>)}</select></label>
+              </div>
+              <label className="field"><span>Description</span><input name="description" value={formAct.description} onChange={sel(setFormAct)}/></label>
+              <div className="form-row">
+                <label className="field"><span>Prix/pers (€)</span><input type="number" name="prix_personne" min="1" step="0.01" value={formAct.prix_personne} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Durée (h)</span><input type="number" name="duree_h" min=".5" step=".5" value={formAct.duree_h} onChange={sel(setFormAct)}/></label>
+                <label className="field"><span>Places</span><input type="number" name="places_totales" min="1" value={formAct.places_totales} onChange={sel(setFormAct)} required/></label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Premier créneau</span><input type="datetime-local" name="date_heure" value={formAct.date_heure} onChange={sel(setFormAct)} required/></label>
+                <label className="field"><span>Destination</span><select name="id_destination" value={formAct.id_destination} onChange={sel(setFormAct)}>{destinations.map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}</select></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier'}</button>
+            </form>
+          )}
+          {(data?.activites??[]).length===0&&!showActForm&&<p className="muted">Aucune activité publiée.</p>}
+          {(data?.activites??[]).map(a=>(
+            <div key={a.id_activite} className="dash-item">
+              <div><strong>{a.nom}</strong> <span className="tag">{a.categorie}</span> <span className="tag">{a.destination}</span>
+                <p className="muted small">{a.prix_personne} €/pers. · {a.nb_creneaux} créneau(x) dispo.</p>
+              </div>
+              <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:'Supprimer cette activité ?', fn:async()=>{
+                setBusy(true);setMsg('');
+                try{await api('hote_supprimer_activite.php',{method:'POST',body:JSON.stringify({id:a.id_activite})});await reload();}
+                catch(err){setMsg(err.message);}finally{setBusy(false);}
+              }})}>Supprimer</button>
             </div>
-            <p class="testimonial-text">"Les meilleurs prix du marché ! L'interface est simple à utiliser et le support répond immédiatement."</p>
-            <div class="testimonial-author">
-              <div class="author-avatar">M</div>
-              <div class="author-info">
-                <h4>Marc Leroux</h4>
-                <p>Lyon, France</p>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  /* ─ Espace admin ─ */
+  function AdminDashboard({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
+    const [data,setData]     = useState(null);
+    const [loading,setLoading] = useState(true);
+    const [msg,setMsg]   = useState('');
+    const [busy,setBusy] = useState(false);
+    const [confirmModal,setConfirmModal] = useState(null);
+    const [showForm,setShowForm]   = useState(false);
+    const [showTrForm,setShowTrForm] = useState(false);
+    const defDest={nom:'',pays:'',region:'',description:'',latitude:'',longitude:''};
+    const defTr={id_destination:'',ville_depart:'',type:'avion',compagnie:'',date_depart:'',date_arrivee:'',prix:'',places_dispo:''};
+    const [form,setForm]   = useState(defDest);
+    const [formTr,setFormTr] = useState(defTr);
+    async function reload(){ const d=await api('admin_dashboard.php'); setData(d); }
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    async function submitDest(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('admin_creer_destination.php',{method:'POST',body:JSON.stringify({...form,latitude:form.latitude?parseFloat(form.latitude):null,longitude:form.longitude?parseFloat(form.longitude):null})});
+        setMsg('✓ Destination publiée !'); setShowForm(false); setForm(defDest); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    async function submitTr(e){
+      e.preventDefault(); setBusy(true); setMsg('');
+      try{
+        await api('admin_creer_transport.php',{method:'POST',body:JSON.stringify({...formTr,id_destination:parseInt(formTr.id_destination),prix:parseFloat(formTr.prix),places_dispo:parseInt(formTr.places_dispo)})});
+        setMsg('✓ Transport créé !'); setShowTrForm(false); setFormTr(defTr); await reload();
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    const sel  = e=>setForm(f=>({...f,[e.target.name]:e.target.value}));
+    const selTr= e=>setFormTr(f=>({...f,[e.target.name]:e.target.value}));
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    const s=data?.stats??{};
+    return (
+      <div className="page">
+        {confirmModal&&<ConfirmModal msg={confirmModal.msg} onOk={()=>{confirmModal.fn();setConfirmModal(null);}} onCancel={()=>setConfirmModal(null)}/>}
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <h1 className="detail-title">Espace admin</h1>
+          <p className="muted">Gérez les destinations et modérez les contenus.</p>
+        </div>
+        {msg&&<p className={msg.startsWith('✓')?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        <div className="stats-row">
+          {[['Utilisateurs',s.nb_utilisateurs],['Voyageurs',s.nb_voyageurs],['Hôtes',s.nb_hotes],['Destinations',s.nb_destinations],['Hébergements',s.nb_hebergements],['Séjours validés',s.nb_sejours_valides]].map(([l,v])=>(
+            <div key={l} className="stat-card"><span className="stat-val">{v}</span><span className="muted small">{l}</span></div>
+          ))}
+        </div>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Destinations</h2>
+            <button className="btn" onClick={()=>setShowForm(!showForm)}>{showForm?'Annuler':'+ Nouvelle destination'}</button>
+          </div>
+          {showForm&&(
+            <form onSubmit={submitDest} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Nom</span><input name="nom" value={form.nom} onChange={sel} required/></label>
+                <label className="field"><span>Pays</span><input name="pays" value={form.pays} onChange={sel} required/></label>
+                <label className="field"><span>Région</span><input name="region" value={form.region} onChange={sel}/></label>
+              </div>
+              <label className="field"><span>Description</span><input name="description" value={form.description} onChange={sel}/></label>
+              <div className="form-row">
+                <label className="field"><span>Latitude</span><input type="number" name="latitude" step=".000001" value={form.latitude} onChange={sel}/></label>
+                <label className="field"><span>Longitude</span><input type="number" name="longitude" step=".000001" value={form.longitude} onChange={sel}/></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Publication…':'Publier la destination'}</button>
+            </form>
+          )}
+          {(data?.destinations??[]).map(d=>(
+            <div key={d.id_destination} className="dash-item">
+              <div><strong>{d.nom}</strong> <span className="tag">{d.pays}</span>
+                {d.region&&<span className="muted small" style={{marginLeft:'.5rem'}}>{d.region}</span>}
+                <p className="muted small">{d.nb_hebergements} hébergement(s)</p>
+              </div>
+              <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:`Supprimer la destination "${d.nom}" ?`, fn:async()=>{
+                setBusy(true);setMsg('');
+                try{await api('admin_supprimer_destination.php',{method:'POST',body:JSON.stringify({id:d.id_destination})});await reload();}
+                catch(err){setMsg(err.message);}finally{setBusy(false);}
+              }})}>Supprimer</button>
+            </div>
+          ))}
+        </section>
+        <section className="detail-section">
+          <div className="section-hd">
+            <h2 className="section-title" style={{border:'none',marginBottom:0}}>Transports</h2>
+            <button className="btn" onClick={()=>setShowTrForm(!showTrForm)}>{showTrForm?'Annuler':'+ Nouveau transport'}</button>
+          </div>
+          {showTrForm&&(
+            <form onSubmit={submitTr} className="dash-form">
+              <div className="form-row">
+                <label className="field"><span>Destination</span>
+                  <select name="id_destination" value={formTr.id_destination} onChange={selTr} required>
+                    <option value="">— choisir —</option>
+                    {(data?.destinations??[]).map(d=><option key={d.id_destination} value={d.id_destination}>{d.nom} ({d.pays})</option>)}
+                  </select>
+                </label>
+                <label className="field"><span>Ville de départ</span><input name="ville_depart" value={formTr.ville_depart} onChange={selTr} required/></label>
+                <label className="field"><span>Type</span>
+                  <select name="type" value={formTr.type} onChange={selTr}>{['avion','train','bus','ferry'].map(t=><option key={t}>{t}</option>)}</select>
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Compagnie</span><input name="compagnie" value={formTr.compagnie} onChange={selTr}/></label>
+                <label className="field"><span>Prix (€)</span><input type="number" name="prix" min="0" step="0.01" value={formTr.prix} onChange={selTr} required/></label>
+                <label className="field"><span>Places</span><input type="number" name="places_dispo" min="1" value={formTr.places_dispo} onChange={selTr} required/></label>
+              </div>
+              <div className="form-row">
+                <label className="field"><span>Date de départ</span><input type="datetime-local" name="date_depart" value={formTr.date_depart} onChange={selTr} required/></label>
+                <label className="field"><span>Date d'arrivée</span><input type="datetime-local" name="date_arrivee" value={formTr.date_arrivee} onChange={selTr} required/></label>
+              </div>
+              <button type="submit" className="btn" disabled={busy}>{busy?'Création…':'Créer le transport'}</button>
+            </form>
+          )}
+        </section>
+        <section className="detail-section">
+          <h2 className="section-title">Séjours et voyageurs associés</h2>
+          {(data?.sejours??[]).map(s=>(
+            <div key={s.id_sejour} className="dash-item">
+              <div>
+                <strong>{s.titre}</strong>
+                <span className="tag" style={{marginLeft:'.5rem'}}>{s.statut}</span>
+                <p className="muted small">Voyageur : {s.voyageur_prenom} {s.voyageur_nom} — {s.voyageur_email}</p>
+                {s.date_debut&&<p className="muted small">{fmtDate(s.date_debut)} → {fmtDate(s.date_fin)} · {Number(s.prix_total).toFixed(2)} €</p>}
+              </div>
+              {s.statut==='brouillon'&&(
+                <button className="btn-danger-sm" disabled={busy} onClick={()=>setConfirmModal({msg:`Supprimer le séjour "${s.titre}" ?`, fn:async()=>{
+                  setBusy(true);setMsg('');
+                  try{await api('supprimer_sejour.php',{method:'POST'});await reload();}
+                  catch(err){setMsg(err.message);}finally{setBusy(false);}
+                }})}>Supprimer</button>
+              )}
+            </div>
+          ))}
+        </section>
+        <section className="detail-section">
+          <h2 className="section-title">Gestion des utilisateurs</h2>
+          {(data?.utilisateurs??[]).map(u=>(
+            <div key={u.id_utilisateur} className="dash-item">
+              <div>
+                <strong>{u.prenom} {u.nom}</strong>
+                <span className="tag" style={{marginLeft:'.5rem'}}>{u.role}</span>
+                {u.statut==='suspendu'&&<span className="tag tag-warn" style={{marginLeft:'.4rem'}}>suspendu</span>}
+                <p className="muted small">{u.email}</p>
+              </div>
+              <div style={{display:'flex',gap:'.4rem',flexWrap:'wrap'}}>
+                {u.role!=='admin'    && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'promote_admin'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Admin</button>}
+                {u.role!=='hote'     && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'promote_hote'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Hôte</button>}
+                {u.role!=='voyageur' && <button className="btn-ghost" style={{fontSize:'.75rem',padding:'.2rem .6rem'}} disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'demote'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>→ Voyageur</button>}
+                {u.statut==='actif'
+                  ? <button className="btn-danger-sm" disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'suspend'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>Suspendre</button>
+                  : <button className="btn-ghost"    disabled={busy} onClick={async()=>{setBusy(true);try{await api('admin_gerer_utilisateur.php',{method:'POST',body:JSON.stringify({id:u.id_utilisateur,action:'activer'})});await reload();}catch(err){setMsg(err.message);}finally{setBusy(false);}}}>Réactiver</button>
+                }
               </div>
             </div>
-          </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
 
-          <div class="testimonial-card scroll-reveal">
-            <div class="testimonial-stars">
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span><span class="star">★</span>
-              <span class="star">★</span>
-            </div>
-            <p class="testimonial-text">"Mon séjour en Thaïlande était incroyable. VoyageVista a géré chaque détail à la perfection !"</p>
-            <div class="testimonial-author">
-              <div class="author-avatar">S</div>
-              <div class="author-info">
-                <h4>Sophie Rousseau</h4>
-                <p>Marseille, France</p>
+  /* ─ Historique des séjours ─ */
+  function Historique({user,onLogout,nav,nbNotifs=0,nbItems=0,currency='EUR',changeCurrency=null}){
+    const [historique,setHistorique] = useState([]);
+    const [loading,setLoading]       = useState(true);
+    const [avisModal,setAvisModal]   = useState(null);
+    const [note,setNote]             = useState(0);
+    const [commentaire,setCommentaire] = useState('');
+    const [msg,setMsg]        = useState('');
+    const [msgOk,setMsgOk]   = useState(false);
+    const [busy,setBusy]     = useState(false);
+    const reload = ()=>api('historique.php').then(d=>setHistorique(d.historique||[]));
+    useEffect(()=>{ reload().finally(()=>setLoading(false)); },[]);
+    function lancerPDF({sejour,hebergements=[],activites=[],transports=[]}){
+      const row=(cells)=>`<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`;
+      const section=(titre,rows)=>rows.length===0?'':
+        `<h2>${titre}</h2><table><tbody>${rows.join('')}</tbody></table>`;
+      const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Itinéraire — ${sejour.titre}</title>
+<style>
+  body{font-family:Arial,sans-serif;padding:2.5rem;color:#333;max-width:780px;margin:0 auto}
+  h1{font-size:1.8rem;margin:0 0 .2rem}
+  .sub{color:#726b5e;margin:0 0 2rem}
+  .trip{font-size:1.2rem;font-weight:700;margin:0 0 .25rem}
+  .meta{color:#726b5e;font-size:.9rem;margin:0 0 1.5rem}
+  h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:#555;border-bottom:1px solid #ccc;padding-bottom:.3rem;margin:1.5rem 0 .5rem}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .footer{margin-top:2.5rem;font-size:.78rem;color:#aaa;text-align:center}
+</style></head><body>
+<div style="text-align:center;margin-bottom:2rem"><h1>VoyageVista</h1><p class="sub">Itinéraire de voyage</p></div>
+<p class="trip">${sejour.titre}</p>
+<p class="meta">Réservé le ${fmtDate(sejour.date_creation)} &middot; Total : ${Number(sejour.prix_total).toFixed(2)} €</p>
+${section('Transports', transports.map(t=>row([
+  t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`,
+  t.type, t.compagnie||'', fmtDatetime(t.date_depart),
+  `<span style="float:right">${Number(t.prix).toFixed(2)} €</span>`
+])))}
+${section('Hébergements', hebergements.map(h=>row([
+  h.nom_hebergement, h.type,
+  `${fmtDate(h.date_debut)} — ${fmtDate(h.date_fin)}`,
+  `<span style="float:right">${Number(h.prix).toFixed(2)} €</span>`
+])))}
+${section('Activités', activites.map(a=>row([
+  a.nom_activite, a.categorie, fmtDatetime(a.date_heure),
+  `<span style="float:right">${Number(a.prix).toFixed(2)} €</span>`
+])))}
+<p class="footer">Document généré par VoyageVista — Paiement simulé, projet pédagogique</p>
+</body></html>`;
+      const w=window.open('','_blank','width=820,height=700');
+      w.document.write(html);
+      w.document.close();
+      w.addEventListener('load',()=>{ w.focus(); w.print(); });
+    }
+    async function annulerSejour(id){
+      if(!confirm('Annuler ce séjour ? Les disponibilités seront restituées.')) return;
+      setBusy(true); setMsg(''); setMsgOk(false);
+      try{
+        await api('annuler_sejour.php',{method:'POST',body:JSON.stringify({id_sejour:id})});
+        setMsg('Séjour annulé.'); setMsgOk(true); await reload();
+      }catch(err){setMsg(err.message); setMsgOk(false);}finally{setBusy(false);}
+    }
+    async function soumettreAvis(e){
+      e.preventDefault(); if(!note)return; setBusy(true); setMsg('');
+      try{
+        await api('avis.php',{method:'POST',body:JSON.stringify({type:avisModal.type,id_cible:avisModal.id_cible,note,commentaire})});
+        setMsg('Avis enregistré. Merci !'); setAvisModal(null); setNote(0); setCommentaire('');
+      }catch(err){setMsg(err.message);}finally{setBusy(false);}
+    }
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    return (
+      <div className="page">
+        <Topbar user={user} onLogout={onLogout} nav={nav} nbNotifs={nbNotifs} nbItems={nbItems} currency={currency} changeCurrency={changeCurrency}/>
+        <div className="detail-header">
+          <button className="btn-back" onClick={()=>nav('catalogue')}>← Retour</button>
+          <h1 className="detail-title">Mes voyages</h1>
+        </div>
+        {msg&&<p className={msgOk?'msg-ok':'error'} style={{marginBottom:'1rem'}}>{msg}</p>}
+        {historique.length===0&&<p className="muted">Aucun séjour pour le moment.</p>}
+        {historique.map(({sejour,hebergements,activites,transports})=>(
+          <section key={sejour.id_sejour} className="detail-section">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+              <div>
+                <h2 style={{margin:'0 0 .25rem'}}>{sejour.titre}</h2>
+                <p className="muted small">{fmtDate(sejour.date_creation)} · {Number(sejour.prix_total).toFixed(2)} €</p>
+              </div>
+              <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
+                <span className="tag tag-ok">validé</span>
+                <button className="btn-ghost" style={{fontSize:'.82rem',padding:'.3rem .7rem'}} onClick={()=>lancerPDF({sejour,hebergements,activites,transports})}>PDF</button>
+                <button className="btn-ghost" style={{color:'#c0392b',fontSize:'.82rem',padding:'.3rem .7rem'}} disabled={busy} onClick={()=>annulerSejour(sejour.id_sejour)}>Annuler</button>
               </div>
             </div>
+            {(hebergements||[]).map(h=>(
+              <div key={h.id_hebergement} className="hist-item">
+                <div>
+                  <span className="hist-icon">🏠</span>
+                  <div><strong>{h.nom_hebergement}</strong> <span className="tag">{h.type}</span>
+                    <p className="muted small">{h.nom_destination}, {h.pays}</p>
+                    <p className="muted small">{fmtDate(h.date_debut)} → {fmtDate(h.date_fin)} · {Number(h.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+                <button className="btn-ghost hist-rate-btn" onClick={()=>{setAvisModal({type:'hebergement',id_cible:h.id_hebergement,nom:h.nom_hebergement});setNote(0);setCommentaire('');setMsg('');}}>⭐ Évaluer</button>
+              </div>
+            ))}
+            {(activites||[]).map(a=>(
+              <div key={a.id_activite} className="hist-item">
+                <div>
+                  <span className="hist-icon">🎯</span>
+                  <div><strong>{a.nom_activite}</strong> <span className="tag">{a.categorie}</span>
+                    <p className="muted small">{a.nom_destination} · {fmtDatetime(a.date_heure)} · {a.nb_participants} pers.</p>
+                    <p className="muted small">{Number(a.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+                <button className="btn-ghost hist-rate-btn" onClick={()=>{setAvisModal({type:'activite',id_cible:a.id_activite,nom:a.nom_activite});setNote(0);setCommentaire('');setMsg('');}}>⭐ Évaluer</button>
+              </div>
+            ))}
+            {(transports||[]).map((t,i)=>(
+              <div key={i} className="hist-item">
+                <div>
+                  <span className="hist-icon">{transportIcon(t.type)}</span>
+                  <div><strong>{t.sens==='retour'?`${t.destination} → ${t.ville_depart}`:`${t.ville_depart} → ${t.destination}`}</strong> <span className="tag">{t.type}</span>
+                    <p className="muted small">{fmtDatetime(t.date_depart)} · {t.nb_passagers} passager(s) · {Number(t.prix).toFixed(0)} €</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        ))}
+        {avisModal&&(
+          <div className="modal-overlay" onClick={()=>setAvisModal(null)}>
+            <div className="modal-card" onClick={e=>e.stopPropagation()}>
+              <h3 style={{marginBottom:'.5rem'}}>Évaluer</h3>
+              <p className="muted" style={{marginBottom:'1rem'}}>{avisModal.nom}</p>
+              <form onSubmit={soumettreAvis} className="form">
+                <div style={{marginBottom:'1rem'}}><StarRating value={note} onRate={setNote}/></div>
+                <label className="field">
+                  <span>Commentaire (facultatif)</span>
+                  <textarea value={commentaire} onChange={e=>setCommentaire(e.target.value)} rows="3" style={{resize:'vertical'}}/>
+                </label>
+                {msg&&<p className="error">{msg}</p>}
+                <div className="booking-actions">
+                  <button type="submit" className="btn" disabled={busy||!note}>{busy?'Envoi…':'Envoyer'}</button>
+                  <button type="button" className="btn-ghost" onClick={()=>setAvisModal(null)}>Annuler</button>
+                </div>
+              </form>
+            </div>
           </div>
-
-        </div>
+        )}
       </div>
-    </section>
+    );
+  }
 
-    <section class="newsletter" id="newsletter">
-      <div class="newsletter-container">
-        <h2>Recevez nos Meilleures Offres</h2>
-        <p>Inscrivez-vous à notre newsletter pour recevoir les dernières offres en exclusivité</p>
-        <form class="newsletter-form">
-          <input type="email" placeholder="Votre adresse email" required>
-          <button type="submit" class="btn btn-primary">S'inscrire</button>
-        </form>
-      </div>
-    </section>
+  /* ─ Application ─ */
+  if(localStorage.getItem('darkMode')==='1') document.documentElement.setAttribute('data-theme','dark');
 
-  </main>
+  function App(){
+    const [user,setUser]         = useState(null);
+    const [loading,setLoading]   = useState(true);
+    const [vue,setVue]           = useState('catalogue');
+    const [vueData,setVueData]   = useState(null);
+    const [nbNotifs,setNbNotifs] = useState(0);
+    const [nbItems,setNbItems]   = useState(0);
+    const [currency,setCurrency] = useState(localStorage.getItem('vv_currency')||'EUR');
+    const [rates,setRates]       = useState({EUR:1,USD:1.08,GBP:0.86,JPY:163});
+    useEffect(()=>{
+      fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json')
+        .then(r=>r.json()).then(d=>setRates({EUR:1,USD:d.eur.usd,GBP:d.eur.gbp,JPY:d.eur.jpy})).catch(()=>{});
+    },[]);
+    const SYMBOLS={EUR:'€',USD:'$',GBP:'£',JPY:'¥'};
+    function fmtCur(eur){
+      const v=Number(eur)*(rates[currency]||1);
+      const s=SYMBOLS[currency]||currency;
+      return currency==='JPY'?`${Math.round(v)} ${s}`:`${Math.round(v)} ${s}`;
+    }
+    function changeCurrency(c){ setCurrency(c); localStorage.setItem('vv_currency',c); }
+    useEffect(()=>{ api('me.php').then(d=>setUser(d.user)).catch(()=>setUser(null)).finally(()=>setLoading(false)); },[]);
+    useEffect(()=>{
+      if(!user)return;
+      api('notifications.php').then(d=>setNbNotifs(d.nb_non_lues)).catch(()=>{});
+      api('mon_sejour.php').then(d=>{
+        setNbItems((d.hebergements?.length||0)+(d.transports?.length||0)+(d.activites?.length||0));
+      }).catch(()=>{});
+    },[user,vue]);
+    async function login(email,mot_de_passe){
+      const d=await api('login.php',{method:'POST',body:JSON.stringify({email,mot_de_passe})});
+      setUser(d.user);
+      if(d.user.role==='hote')  setVue('hote');
+      if(d.user.role==='admin') setVue('admin');
+    }
+    async function logout(){
+      await api('logout.php',{method:'POST'});
+      setUser(null); setVue('catalogue'); setVueData(null);
+    }
+    function nav(v,data=null){ setVue(v); setVueData(data); }
 
-  <!-- footer -->
-  <footer>
-    <div class="footer-container">
+    if(loading)return <div className="screen-center muted">Chargement…</div>;
+    if(!user)  return <Login onLogin={login}/>;
 
-      <div class="footer-grid">
+    const common={user,onLogout:logout,nav,nbNotifs,nbItems,fmtCur,currency,changeCurrency};
+    if(vue==='confirmation'&&vueData) return <Confirmation infos={vueData} nav={nav}/>;
+    if(vue==='notifications')         return <Notifications {...common}/>;
+    if(vue==='profil')                return <Profil {...common}/>;
+    if(vue==='hote')                  return <HoteDashboard {...common}/>;
+    if(vue==='admin')                 return <AdminDashboard {...common}/>;
+    if(user.role==='hote')            return <HoteDashboard {...common}/>;
+    if(vue==='panier')                return <Panier {...common}/>;
+    if(vue==='historique')            return <Historique {...common}/>;
+    if(vue==='destination'&&vueData)  return <DestinationDetail {...common} destination={vueData}/>;
+    return <Catalogue {...common}/>;
+  }
 
-        <div class="footer-section">
-          <h4>À Propos de VoyageVista</h4>
-          <p>Votre plateforme de voyage premium pour des expériences inoubliables partout dans le monde.</p>
-          <div class="social-links">
-            <a href="#" class="social-link" title="Facebook">f</a>
-            <a href="#" class="social-link" title="Instagram">📷</a>
-            <a href="#" class="social-link" title="Twitter">𝕏</a>
-            <a href="#" class="social-link" title="LinkedIn">in</a>
-          </div>
-        </div>
-
-        <div class="footer-section">
-          <h4>Explorer</h4>
-          <ul class="footer-links">
-            <li><a href="destinations.html">Destinations Populaires</a></li>
-            <li><a href="#experiences">Expériences Uniques</a></li>
-            <li><a href="#">Offres Spéciales</a></li>
-            <li><a href="#">Blog Voyage</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-section">
-          <h4>Support</h4>
-          <ul class="footer-links">
-            <li><a href="contact.html">Nous Contacter</a></li>
-            <li><a href="#">FAQ</a></li>
-            <li><a href="#">Centre d'Aide</a></li>
-            <li><a href="#">Conditions d'Utilisation</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-section">
-          <h4>Contact</h4>
-          <p>
-            📍 123 Avenue du Voyage<br>
-            75008 Paris, France<br><br>
-            📞 +33 1 23 45 67 89<br>
-            ✉️ info@voyagevista.com
-          </p>
-        </div>
-
-      </div>
-
-
-      <div class="footer-bottom">
-        <div>&copy; 2026 VoyageVista. Tous droits réservés.</div>
-        <ul class="footer-legal">
-          <li><a href="#">Politique de Confidentialité</a></li>
-          <li><a href="#">Mentions Légales</a></li>
-          <li><a href="#">Conditions Générales</a></li>
-        </ul>
-      </div>
-
-    </div>
-  </footer>
-
-  <script src="js/app.js"></script>
-
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
 </body>
 </html>
